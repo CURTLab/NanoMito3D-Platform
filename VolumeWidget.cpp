@@ -22,7 +22,6 @@
 
 #include "VolumeWidget.h"
 
-
 #include <vtkCamera.h>
 #include <vtkDataSetMapper.h>
 #include <vtkGenericOpenGLRenderWindow.h>
