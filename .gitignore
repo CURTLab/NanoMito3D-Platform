@@ -1,3 +1,4 @@
 
 *.user
 proto/TSFProto.pb.*
+examples/WOP_CD62p_AntiMito_C1000_dual_dSTORM_red_blue_034_v3.tsf

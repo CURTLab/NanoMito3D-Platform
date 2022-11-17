@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 
-project(Paper_NanoMito_VTK VERSION 0.1 LANGUAGES CXX)
+project(NanoMito3D VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -22,6 +22,7 @@ set(PROJECT_SOURCES
     main.cpp
     MainWindow.cpp MainWindow.h MainWindow.ui
     VolumeWidget.h VolumeWidget.cpp
+    Localizations.h Localizations.cpp
 )
 
 # Protobuf stuff
@@ -51,7 +52,7 @@ endforeach()
 
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-    qt_add_executable(Paper_NanoMito_VTK
+    qt_add_executable(${CMAKE_PROJECT_NAME}
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
     )
@@ -61,19 +62,19 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
 # For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
 else()
     if(ANDROID)
-        add_library(Paper_NanoMito_VTK SHARED
+        add_library(${CMAKE_PROJECT_NAME} SHARED
             ${PROJECT_SOURCES}
         )
 # Define properties for Android with Qt 5 after find_package() calls as:
 #    set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
     else()
-        add_executable(Paper_NanoMito_VTK
+        add_executable(${CMAKE_PROJECT_NAME}
             ${PROJECT_SOURCES}
         )
     endif()
 endif()
 
-target_link_libraries(Paper_NanoMito_VTK
+target_link_libraries(${CMAKE_PROJECT_NAME}
     PRIVATE
         Qt${QT_VERSION_MAJOR}::Widgets
         VTK::GUISupportQt
@@ -81,7 +82,9 @@ target_link_libraries(Paper_NanoMito_VTK
         protobuf::libprotobuf
 )
 
-set_target_properties(Paper_NanoMito_VTK PROPERTIES
+target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE "DEV_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}\"")
+
+set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
@@ -89,7 +92,7 @@ set_target_properties(Paper_NanoMito_VTK PROPERTIES
     WIN32_EXECUTABLE TRUE
 )
 
-install(TARGETS Paper_NanoMito_VTK
+install(TARGETS ${CMAKE_PROJECT_NAME}
     BUNDLE DESTINATION .
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 

@@ -19,29 +19,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ****************************************************************************/
+#ifndef LOCALIZATIONS_H
+#define LOCALIZATIONS_H
 
-#include "MainWindow.h"
-#include "ui_MainWindow.h"
-#include "Localizations.h"
+#include <vector>
+#include <string>
 
-MainWindow::MainWindow(QWidget *parent)
-	: QMainWindow(parent)
-	, m_ui(new Ui::MainWindow)
+struct Localization
 {
-	m_ui->setupUi(this);
+	uint32_t frame;
+	int32_t channel;
+	float x, y, z;
+	float PAx, PAy, PAz;
+};
 
-#ifdef QT_DEBUG
-	try {
-		Localizations locs;
-		locs.load(DEV_PATH "/examples/WOP_CD62p_AntiMito_C1000_dual_dSTORM_red_blue_034_v3.tsf");
-		m_ui->statusbar->showMessage(tr("Loaded %1 localizations from file.").arg(locs.size()));
-	} catch(std::exception &e) {
-		m_ui->statusbar->showMessage(tr("Error: ") + e.what());
-	}
-
-#endif
-}
-
-MainWindow::~MainWindow()
+class Localizations : public std::vector<Localization>
 {
-}
+public:
+	Localizations();
+
+	void load(const std::string &fileName);
+
+private:
+
+};
+
+#endif // LOCALIZATIONS_H
