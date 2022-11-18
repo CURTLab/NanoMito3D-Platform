@@ -27,21 +27,25 @@ public:
 	inline VolumeData()
 		: dims{0, 0, 0}
 		, voxelSize{1.f, 1.f, 1.f}
+		, origin{0.f, 0.f, 0.f}
+		, voxels(0)
 		, data(nullptr)
 	{
 	}
 
-	inline VolumeData(const int dims[3], const float voxelSize[3], const std::array<float, 3> &origin)
+	inline VolumeData(const int dims[3], const std::array<float,3> &voxelSize, const std::array<float, 3> &origin)
 		: dims{dims[0], dims[1], dims[2]}
-		, voxelSize{voxelSize[0], voxelSize[1], voxelSize[2]}
+		, voxelSize(voxelSize)
 		, origin(origin)
-		, data(new uint8_t[dims[0] * dims[1] * dims[2]])
+		, voxels(static_cast<size_t>(dims[0]) * dims[1] * dims[2])
 	{
+		data.reset(new uint8_t[voxels]);
 	}
 
 	std::array<int, 3> dims;
 	std::array<float, 3> voxelSize;
 	std::array<float, 3> origin;
+	size_t voxels;
 	std::unique_ptr<uint8_t[]> data;
 
 };
@@ -53,6 +57,12 @@ Volume::Volume()
 }
 
 Volume::Volume(const int dims[], const float voxelSize[], std::array<float, 3> origin)
+	: d(new VolumeData(dims, {voxelSize[0], voxelSize[1], voxelSize[2]}, origin))
+{
+
+}
+
+Volume::Volume(const int dims[], const std::array<float, 3> voxelSize, std::array<float, 3> origin)
 	: d(new VolumeData(dims, voxelSize, origin))
 {
 
@@ -76,7 +86,7 @@ Volume &Volume::operator=(const Volume &other)
 
 void Volume::fill(uint8_t value)
 {
-	std::fill_n(d->data.get(), d->dims[0] * d->dims[1] * d->dims[2], value);
+	std::fill_n(d->data.get(), d->voxels, value);
 }
 
 int Volume::width() const
@@ -96,7 +106,7 @@ int Volume::depth() const
 
 size_t Volume::voxels() const
 {
-	return d->dims[0] * d->dims[1] * d->dims[2];
+	return d->voxels;
 }
 
 const std::array<float,3> &Volume::voxelSize() const

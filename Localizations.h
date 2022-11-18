@@ -24,13 +24,18 @@
 
 #include <vector>
 #include <string>
+#include <array>
+
+#include "Bounds.h"
 
 struct Localization
 {
-	uint32_t frame;
-	int32_t channel;
 	float x, y, z;
+	uint32_t frame;
 	float PAx, PAy, PAz;
+	int32_t channel;
+
+	inline constexpr std::array<float,3> position() const { return {x, y, z}; };
 };
 
 class Localizations : public std::vector<Localization>
@@ -46,6 +51,10 @@ public:
 	inline constexpr float pixelSize() const { return m_pixelSize; }
 	inline constexpr float minZ() const { return m_minZ; }
 	inline constexpr float maxZ() const { return m_maxZ; }
+
+	inline constexpr Bounds<float> bounds() const {
+		return {0.f, m_width * m_pixelSize,  0.f, m_height * m_pixelSize, m_minZ, m_maxZ };
+	}
 
 private:
 	int m_width;

@@ -32,6 +32,7 @@ class Volume final
 public:
 	Volume();
 	Volume(const int dims[3], const float voxelSize[3], std::array<float,3> origin = {0.f});
+	Volume(const int dims[3], const std::array<float,3> voxelSize, std::array<float,3> origin = {0.f});
 	Volume(const Volume &other);
 	~Volume();
 

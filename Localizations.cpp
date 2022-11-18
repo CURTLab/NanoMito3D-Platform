@@ -28,9 +28,12 @@
 #include <google/protobuf/io/coded_stream.h>
 #include "proto/TSFProto.pb.h"
 
+#include <array>
+
 Localizations::Localizations()
 	: m_width(0), m_height(0), m_pixelSize(1.f)
 {
+	static_assert(sizeof(Localization) == 32);
 }
 
 void Localizations::load(const std::string &fileName)
@@ -42,7 +45,7 @@ void Localizations::load(const std::string &fileName)
 		throw std::runtime_error("Could not open file!");
 	}
 
-	int32_t magic;
+	int32_t magic = 1;
 	stream.read((char*)&magic, sizeof(magic));
 	if (magic != 0)
 		throw std::runtime_error("Magic number is not 0, is this a tsf file?");
@@ -60,7 +63,7 @@ void Localizations::load(const std::string &fileName)
 	std::swap(offset.d[3], offset.d[4]);
 
 	TSF::SpotList spotList;
-	uint32_t mSize;
+	uint32_t mSize = 0;
 	std::string buffer;
 	TSF::Spot spot;
 
