@@ -23,7 +23,8 @@
 #include "MainWindow.h"
 #include "ui_MainWindow.h"
 #include "Localizations.h"
-#include "Octree.h"
+#include "DensityFilter.h"
+#include "Device.h"
 
 #include <chrono>
 #include <iostream>
@@ -57,6 +58,8 @@ MainWindow::MainWindow(QWidget *parent)
 	, m_ui(new Ui::MainWindow)
 {
 	m_ui->setupUi(this);
+
+	GPU::initGPU();
 }
 
 MainWindow::~MainWindow()
@@ -72,7 +75,7 @@ void MainWindow::showEvent(QShowEvent *event)
 		auto start = std::chrono::steady_clock::now();
 
 		Localizations locs;
-		locs.load(DEV_PATH "/examples/WOP_CD62p_AntiMito_C1000_dual_dSTORM_red_blue_034_v3.tsf");
+		locs.load(DEV_PATH "/examples/WOP_CD62p_AntiMito_C1000_dual_Cell4_dSTORM_red_blue_031_v3.tsf");
 		m_ui->statusbar->showMessage(tr("Loaded %1 localizations from file. %2 x %3 µm²").arg(locs.size()).arg(locs.width()*1E-3).arg(locs.height()*1E-3));
 
 		const std::array<float,3> voxelSize{85.f, 85.f, 25.f}; // nm
@@ -86,6 +89,7 @@ void MainWindow::showEvent(QShowEvent *event)
 		auto dur = std::chrono::duration<double>(end - start);
 		std::cout << "Locs: " << locs.size() << " in " << dur.count() << " s" << std::endl;
 
+#if 1
 		// filter localizations by channel and PA
 		start = std::chrono::steady_clock::now();
 
@@ -97,26 +101,27 @@ void MainWindow::showEvent(QShowEvent *event)
 		dur = std::chrono::duration<double>(end - start);
 
 		std::cout << "Filtered: " << locs.size() << " in " << dur.count() << " s" << std::endl;
+#endif
 
-#if 1
-		// filter by density
+#if 0
+		// filter by density CPU
 		start = std::chrono::steady_clock::now();
-		Octree<uint32_t,float,50> tree(locs.bounds());
-		for (uint32_t i = 0; i < locs.size(); ++i)
-			tree.insert(locs[i].position(), i);
-		std::cout << "Octree: " << tree.size() << std::endl;
 
-		locs.erase(std::remove_if(locs.begin(), locs.end(), [&tree](const Localization &l) {
-			const float radius = 250;
-			int minPoints = 10;
-			const auto pts = tree.countInSphere(l.position(), radius);
-			return pts < minPoints;
-		}), locs.end());
+		locs.erase(DensityFilter::remove_cpu(locs, 10, 250.f), locs.end());
 
 		end = std::chrono::steady_clock::now();
 		dur = std::chrono::duration<double>(end - start);
 
-		std::cout << "Filtered2: " << locs.size()  << " in " << dur.count() << " s" << std::endl;
+		std::cout << "Density filter (CPU): " << locs.size()  << " in " << dur.count() << " s" << std::endl;
+#else
+		// filter by density GPU
+		start = std::chrono::steady_clock::now();
+		locs.erase(DensityFilter::remove_gpu(locs, 10, 250.f), locs.end());
+
+		end = std::chrono::steady_clock::now();
+		dur = std::chrono::duration<double>(end - start);
+
+		std::cout << "Density filter (GPU): " << locs.size()  << " in " << dur.count() << " s" << std::endl;
 #endif
 
 		m_volume = Volume(dims, voxelSize, {0.f, 0.f, locs.minZ()});
@@ -128,6 +133,7 @@ void MainWindow::showEvent(QShowEvent *event)
 		m_ui->widget->setVolume(m_volume);
 	} catch(std::exception &e) {
 		m_ui->statusbar->showMessage(tr("Error: ") + e.what());
+		std::cerr << std::string("Error: ") + e.what() << std::endl;
 	}
 //#endif
 }

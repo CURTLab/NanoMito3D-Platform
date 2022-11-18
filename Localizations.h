@@ -27,6 +27,7 @@
 #include <array>
 
 #include "Bounds.h"
+#include "Device.h"
 
 struct Localization
 {
@@ -42,6 +43,7 @@ class Localizations : public std::vector<Localization>
 {
 public:
 	Localizations();
+	~Localizations();
 
 	void load(const std::string &fileName);
 
@@ -56,12 +58,19 @@ public:
 		return {0.f, m_width * m_pixelSize,  0.f, m_height * m_pixelSize, m_minZ, m_maxZ };
 	}
 
+	bool copyTo(DeviceType device);
+	const Localization *constData(DeviceType device) const;
+
 private:
+	void alloc(DeviceType device, size_t n);
+
 	int m_width;
 	int m_height;
 	float m_pixelSize;
 	float m_minZ;
 	float m_maxZ;
+	Localization *m_dData;
+	size_t m_dSize;
 
 };
 

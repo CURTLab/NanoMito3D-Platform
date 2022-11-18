@@ -23,17 +23,23 @@
 
 #include <fstream>
 #include <sstream>
+#include <array>
 
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <google/protobuf/io/coded_stream.h>
 #include "proto/TSFProto.pb.h"
 
-#include <array>
+#include <cuda_runtime.h>
 
 Localizations::Localizations()
-	: m_width(0), m_height(0), m_pixelSize(1.f)
+	: m_width(0), m_height(0), m_pixelSize(1.f), m_dData(nullptr), m_dSize(0)
 {
 	static_assert(sizeof(Localization) == 32);
+}
+
+Localizations::~Localizations()
+{
+	cudaFree(m_dData);
 }
 
 void Localizations::load(const std::string &fileName)
@@ -144,4 +150,45 @@ void Localizations::load(const std::string &fileName)
 
 
 	stream.close();
+}
+
+bool Localizations::copyTo(DeviceType device)
+{
+	if (device == DeviceType::Device) {
+		if (m_dData == nullptr)
+			alloc(DeviceType::Device, size());
+		if (cudaMemcpy(m_dData, data(), size() * sizeof(Localization), cudaMemcpyHostToDevice) != cudaSuccess)
+			throw std::runtime_error("Could not copy localizations from host to device!");
+		return true;
+	} else if (device == DeviceType::Host) {
+		if (m_dData == nullptr)
+			throw std::runtime_error("No device data allocated!");
+		if (cudaMemcpy(data(), m_dData, size() * sizeof(Localization), cudaMemcpyDeviceToHost) != cudaSuccess)
+			throw std::runtime_error("Could not copy localizations from device to host!");
+		return true;
+	}
+	return false;
+}
+
+const Localization *Localizations::constData(DeviceType device) const
+{
+	if (device == DeviceType::Device) {
+		if (m_dData == nullptr)
+			throw std::runtime_error("No device data allocated!");
+		return m_dData;
+	} else if (device == DeviceType::Host) {
+		return data();
+	}
+	return nullptr;
+}
+
+void Localizations::alloc(DeviceType device, size_t n)
+{
+	if (device == DeviceType::Device) {
+		if (m_dData != nullptr)
+			cudaFree(m_dData);
+		if (cudaMalloc(&m_dData, sizeof(Localization) * n) != cudaSuccess)
+			throw std::runtime_error("Could not allocate GPU memory for localizations (" + std::to_string(n) + " bytes)!");
+		m_dSize = n;
+	}
 }

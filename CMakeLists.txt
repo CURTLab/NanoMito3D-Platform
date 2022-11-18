@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 
-project(NanoMito3D VERSION 0.1 LANGUAGES CXX)
+project(NanoMito3D VERSION 0.1 LANGUAGES CUDA CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -17,8 +17,14 @@ find_package(VTK 8.0 REQUIRED COMPONENTS GUISupportQt RenderingVolumeOpenGL2)
 find_package(OpenCV REQUIRED)
 find_package(Protobuf CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
+find_package(CUDA 7.0 REQUIRED)
+
+add_subdirectory(3dparty/cuNSearch)
 
 set(PROJECT_SOURCES
+    kernels/DensityFilterGPU.cu
+    kernels/DensityFilterCPU.cpp
+    kernels/Device.cu
     main.cpp
     MainWindow.cpp MainWindow.h MainWindow.ui
     VolumeWidget.h VolumeWidget.cpp
@@ -26,10 +32,12 @@ set(PROJECT_SOURCES
     Volume.h Volume.cpp
     Octree.h
     Bounds.h
+    Device.h
+    DensityFilter.h
 )
 
 # Protobuf stuff
-include_directories(${Protobuf_INCLUDE_DIRS})
+include_directories(${Protobuf_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS})
 
 message(STATUS "Using Protocol Buffers ${Protobuf_VERSION}")
 
@@ -70,7 +78,10 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
         ${VTK_LIBRARIES}
         ${OpenCV_LIBS}
         protobuf::libprotobuf
+        cuNSearch
 )
+
+set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES CUDA_ARCHITECTURES "50")
 
 # VTK autoinit
 vtk_module_autoinit(

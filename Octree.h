@@ -83,10 +83,10 @@ bool Octree<T, P, CAPACITY>::insert(const std::array<P, 3> &p, T value) noexcept
 		return true;
 	}
 
-	const auto hsizex = m_bounds.width()*0.5, hsizey = m_bounds.height()*0.5, hsizez = m_bounds.depth()*0.5;
+	const P hsizex = m_bounds.width()*0.5, hsizey = m_bounds.height()*0.5, hsizez = m_bounds.depth()*0.5;
 	const Bounds<P> sub[8] = {
 		Bounds<P>(m_bounds.origin(), hsizex, hsizey, hsizez),
-		Bounds<P>(m_bounds.originOffsetted(hsizex, 0, 0), hsizex, hsizey, hsizez),
+		Bounds<P>(m_bounds.originOffsetted(hsizex, P(0), P(0)), hsizex, hsizey, hsizez),
 		Bounds<P>(m_bounds.originOffsetted(0, hsizey, 0), hsizex, hsizey, hsizez),
 		Bounds<P>(m_bounds.originOffsetted(hsizex, hsizey, 0), hsizex, hsizey, hsizez),
 		Bounds<P>(m_bounds.originOffsetted(0, 0, hsizez), hsizex, hsizey, hsizez),
