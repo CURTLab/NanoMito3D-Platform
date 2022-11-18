@@ -40,7 +40,19 @@ public:
 
 	void load(const std::string &fileName);
 
+	inline constexpr float width() const { return m_width * m_pixelSize; }
+	inline constexpr float height() const { return m_height * m_pixelSize; }
+	inline constexpr float depth() const { return m_maxZ - m_minZ; }
+	inline constexpr float pixelSize() const { return m_pixelSize; }
+	inline constexpr float minZ() const { return m_minZ; }
+	inline constexpr float maxZ() const { return m_maxZ; }
+
 private:
+	int m_width;
+	int m_height;
+	float m_pixelSize;
+	float m_minZ;
+	float m_maxZ;
 
 };
 

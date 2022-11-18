@@ -25,6 +25,7 @@
 
 #include <QMainWindow>
 #include <memory>
+#include "Volume.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -38,8 +39,12 @@ public:
 	MainWindow(QWidget *parent = nullptr);
 	~MainWindow();
 
+protected:
+	virtual void showEvent(QShowEvent *event);
+
 private:
 	std::unique_ptr<Ui::MainWindow> m_ui;
+	Volume m_volume;
 
 };
 

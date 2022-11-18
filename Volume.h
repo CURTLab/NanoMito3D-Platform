@@ -19,29 +19,42 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ****************************************************************************/
+#ifndef VOLUME_H
+#define VOLUME_H
 
-#ifndef VOLUMEWIDGET_H
-#define VOLUMEWIDGET_H
+#include <memory>
+#include <array>
 
-#include <QWidget>
+class VolumeData;
 
-#include "Volume.h"
-
-class VolumeWidgetPrivate;
-
-class VolumeWidget : public QWidget
+class Volume final
 {
-	Q_OBJECT
-	Q_DECLARE_PRIVATE_D(m_d, VolumeWidget)
 public:
-	VolumeWidget(QWidget *parent = nullptr);
-	~VolumeWidget();
+	Volume();
+	Volume(const int dims[3], const float voxelSize[3], std::array<float,3> origin = {0.f});
+	Volume(const Volume &other);
+	~Volume();
 
-	void setVolume(Volume volume);
+	Volume &operator=(const Volume &other);
+
+	void fill(uint8_t value);
+
+	int width() const;
+	int height() const;
+	int depth() const;
+
+	size_t voxels() const;
+
+	const std::array<float,3> &voxelSize() const;
+	const std::array<float,3> &origin() const;
+
+	uint8_t *data();
+	const uint8_t *constData() const;
+
 
 private:
-	VolumeWidgetPrivate * const m_d;
+	std::shared_ptr<VolumeData> d;
 
 };
 
-#endif // VOLUMEWIDGET_H
+#endif // VOLUME_H

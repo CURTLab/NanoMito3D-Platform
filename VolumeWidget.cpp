@@ -22,17 +22,49 @@
 
 #include "VolumeWidget.h"
 
+#include <QGridLayout>
+
+#include <QVTKOpenGLNativeWidget.h>
+#include <vtkRenderer.h>
+#include <vtkSmartPointer.h>
+
 #include <vtkCamera.h>
 #include <vtkDataSetMapper.h>
 #include <vtkGenericOpenGLRenderWindow.h>
 #include <vtkProperty.h>
 #include <vtkRenderWindowInteractor.h>
 
-VolumeWidget::VolumeWidget(QWidget *parent)
-	: QVTKOpenGLNativeWidget(parent)
+#include <vtkVolume.h>
+#include <vtkPointData.h>
+#include <vtkUnsignedCharArray.h>
+#include <vtkNamedColors.h>
+#include <vtkStructuredPoints.h>
+#include <vtkSmartVolumeMapper.h>
+#include <vtkVolumeProperty.h>
+#include <vtkPiecewiseFunction.h>
+#include <vtkColorTransferFunction.h>
+
+class VolumeWidgetPrivate : public QVTKOpenGLNativeWidget
 {
+public:
+	inline VolumeWidgetPrivate(QWidget *parent) : QVTKOpenGLNativeWidget(parent) {}
+
+
+	vtkSmartPointer<vtkRenderer> renderer;
+};
+
+VolumeWidget::VolumeWidget(QWidget *parent)
+	: m_d(new VolumeWidgetPrivate(parent))
+{
+	Q_D(VolumeWidget);
+
+	QGridLayout *layout = new QGridLayout;
+	layout->setContentsMargins(0, 0, 0, 0);
+	layout->addWidget(d);
+	setLayout(layout);
+
 	vtkNew<vtkGenericOpenGLRenderWindow> window;
-	setRenderWindow(window.Get());
+	d->setRenderWindow(window.Get());
 
 	// Camera
 	vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
@@ -41,8 +73,58 @@ VolumeWidget::VolumeWidget(QWidget *parent)
 	camera->SetFocalPoint(0, 0, 0);
 
 	// Renderer
-	m_renderer = vtkSmartPointer<vtkRenderer>::New();
-	m_renderer->SetActiveCamera(camera);
-	m_renderer->SetBackground(0.5, 0.5, 0.5);
-	renderWindow()->AddRenderer(m_renderer);
+	d->renderer = vtkSmartPointer<vtkRenderer>::New();
+	d->renderer->SetActiveCamera(camera);
+	d->renderer->SetBackground(0.5, 0.5, 0.5);
+	d->renderWindow()->AddRenderer(d->renderer);
+}
+
+VolumeWidget::~VolumeWidget()
+{
+	delete m_d;
+}
+
+void VolumeWidget::setVolume(Volume volume)
+{
+	Q_D(VolumeWidget);
+
+	const size_t numPts = volume.voxels();
+
+	vtkNew<vtkUnsignedCharArray> scalars;
+	scalars->SetArray(volume.data(), numPts, 1);
+	//auto s = scalars->WritePointer(0, numPts);
+	//std::copy_n(volume.data(), numPts, s);
+
+	vtkNew<vtkStructuredPoints> imageData;
+	imageData->GetPointData()->SetScalars(scalars);
+	imageData->SetDimensions(volume.width(), volume.height(), volume.depth());
+	imageData->SetOrigin(volume.origin()[0], volume.origin()[1], volume.origin()[2]);
+	imageData->SetSpacing(volume.voxelSize()[0], volume.voxelSize()[1], volume.voxelSize()[2]);
+
+	vtkNew<vtkSmartVolumeMapper> volumeMapper;
+	//volumeMapper->SetBlendModeToIsoSurface();
+	volumeMapper->SetBlendModeToComposite(); // composite first
+	volumeMapper->SetInputData(imageData);
+
+	vtkNew<vtkVolumeProperty> volumeProperty;
+	volumeProperty->ShadeOff();
+	volumeProperty->SetInterpolationType(VTK_LINEAR_INTERPOLATION);
+
+	vtkNew<vtkPiecewiseFunction> compositeOpacity;
+	compositeOpacity->AddPoint(0.0, 0.0);
+	compositeOpacity->AddPoint(255.0, 1.0);
+	volumeProperty->SetScalarOpacity(compositeOpacity); // composite first.
+
+	vtkNew<vtkColorTransferFunction> color;
+	color->AddRGBPoint(0.0, 0.0, 0.0, 1.0);
+	color->AddRGBPoint(255.0, 0.0, 0.0, 1.0);
+	volumeProperty->SetColor(color);
+
+	vtkNew<vtkVolume> vol;
+	vol->SetMapper(volumeMapper);
+	vol->SetProperty(volumeProperty);
+
+	d->renderer->AddViewProp(vol);
+	d->renderer->ResetCamera();
+	d->renderWindow()->Render();
 }

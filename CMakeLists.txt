@@ -13,7 +13,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
-find_package(VTK 8.0 REQUIRED COMPONENTS GUISupportQt)
+find_package(VTK 8.0 REQUIRED COMPONENTS GUISupportQt RenderingVolumeOpenGL2)
 find_package(OpenCV REQUIRED)
 find_package(Protobuf CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
@@ -23,6 +23,7 @@ set(PROJECT_SOURCES
     MainWindow.cpp MainWindow.h MainWindow.ui
     VolumeWidget.h VolumeWidget.cpp
     Localizations.h Localizations.cpp
+    Volume.h Volume.cpp
 )
 
 # Protobuf stuff
@@ -49,7 +50,6 @@ foreach(PROTO_FILE ${PROTO_FILES})
     list(APPEND PROJECT_SOURCES ${PROTO_SRC})
     list(APPEND PROJECT_SOURCES ${PROTO_HDR})
 endforeach()
-
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(${CMAKE_PROJECT_NAME}
@@ -78,8 +78,15 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     PRIVATE
         Qt${QT_VERSION_MAJOR}::Widgets
         VTK::GUISupportQt
+        VTK::RenderingVolumeOpenGL2
         ${OpenCV_LIBS}
         protobuf::libprotobuf
+)
+
+# VTK autoinit
+vtk_module_autoinit(
+  TARGETS ${CMAKE_PROJECT_NAME}
+  MODULES ${VTK_LIBRARIES}
 )
 
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE "DEV_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}\"")

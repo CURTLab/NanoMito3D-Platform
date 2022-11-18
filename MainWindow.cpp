@@ -24,24 +24,69 @@
 #include "ui_MainWindow.h"
 #include "Localizations.h"
 
+void drawPSF(uint8_t *imageData, const Localization &l, const int volumeDims[3], const float voxelSize[3], int windowSize)
+{
+	const int ix = qRound((l.x / voxelSize[0]));
+	const int iy = qRound((l.y / voxelSize[1]));
+	const int iz = qRound((l.z / voxelSize[2]));
+
+	const int w = windowSize/2;
+	for (int z = -w; z <= w; ++z) {
+		for (int y = -w; y <= w; ++y) {
+			for (int x = -w; x <= w; ++x) {
+				if ((ix + x < 0) || (iy + y < 0) || (iz + z < 0) ||
+					 (ix + x >= volumeDims[0]) || (iy + y >= volumeDims[1]) || (iz + z >= volumeDims[2]))
+					continue;
+				const double tx = ((ix + x) * voxelSize[0] - l.x) / l.PAx;
+				const double ty = ((iy + y) * voxelSize[1] - l.y) / l.PAy;
+				const double tz = ((iz + z) * voxelSize[2] - l.z) / l.PAz;
+				const double e = (255.0/windowSize)*exp(-0.5 * tx * tx -0.5 * ty * ty -0.5 * tz * tz);
+				auto &val = imageData[ix + x + volumeDims[0] * (iy + y) + volumeDims[0] * volumeDims[1] * (iz + z)];
+				val = qBound(0.0, val + e, 255.0);
+			}
+		}
+	}
+}
+
 MainWindow::MainWindow(QWidget *parent)
 	: QMainWindow(parent)
 	, m_ui(new Ui::MainWindow)
 {
 	m_ui->setupUi(this);
-
-#ifdef QT_DEBUG
-	try {
-		Localizations locs;
-		locs.load(DEV_PATH "/examples/WOP_CD62p_AntiMito_C1000_dual_dSTORM_red_blue_034_v3.tsf");
-		m_ui->statusbar->showMessage(tr("Loaded %1 localizations from file.").arg(locs.size()));
-	} catch(std::exception &e) {
-		m_ui->statusbar->showMessage(tr("Error: ") + e.what());
-	}
-
-#endif
 }
 
 MainWindow::~MainWindow()
 {
+}
+
+void MainWindow::showEvent(QShowEvent *event)
+{
+	QMainWindow::showEvent(event);
+
+//#ifdef QT_DEBUG
+	try {
+		Localizations locs;
+		locs.load(DEV_PATH "/examples/WOP_CD62p_AntiMito_C1000_dual_dSTORM_red_blue_034_v3.tsf");
+		m_ui->statusbar->showMessage(tr("Loaded %1 localizations from file. %2 x %3 µm²").arg(locs.size()).arg(locs.width()*1E-3).arg(locs.height()*1E-3));
+
+		const float voxelSize[3] = {85.f, 85.f, 25.f}; // nm
+
+		int dims[3];
+		dims[0] = static_cast<int>(std::ceilf(locs.width()  / voxelSize[0]));
+		dims[1] = static_cast<int>(std::ceilf(locs.height() / voxelSize[1]));
+		dims[2] = static_cast<int>(std::ceilf(locs.depth()  / voxelSize[2]));
+
+		m_volume = Volume(dims, voxelSize, {0.f, 0.f, locs.minZ()});
+		m_volume.fill(0);
+		for (const auto &l : locs) {
+			if (l.channel == 1 || l.PAx > 100 || l.PAy > 100 || l.PAz > 150)
+				continue;
+			drawPSF(m_volume.data(), l, dims, voxelSize, 5);
+		}
+
+		m_ui->widget->setVolume(m_volume);
+	} catch(std::exception &e) {
+		m_ui->statusbar->showMessage(tr("Error: ") + e.what());
+	}
+//#endif
 }

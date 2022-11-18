@@ -29,8 +29,8 @@
 #include "proto/TSFProto.pb.h"
 
 Localizations::Localizations()
+	: m_width(0), m_height(0), m_pixelSize(1.f)
 {
-
 }
 
 void Localizations::load(const std::string &fileName)
@@ -78,6 +78,13 @@ void Localizations::load(const std::string &fileName)
 			throw std::runtime_error("Failed to read SpotList data");
 	}
 
+	m_pixelSize = spotList.has_pixel_size() ? spotList.pixel_size() : 1.f;
+	m_width = spotList.has_nr_pixels_x() ? spotList.nr_pixels_x() : 0;
+	m_height = spotList.has_nr_pixels_y() ? spotList.nr_pixels_y() : 0;
+
+	m_minZ = std::numeric_limits<float>::max();
+	m_maxZ = -std::numeric_limits<float>::max();
+
 	// load localizations from file
 	uint32_t spots = (uint32_t)-1;
 	if (spotList.has_nr_spots())
@@ -114,6 +121,19 @@ void Localizations::load(const std::string &fileName)
 			l.PAz = spot.has_z_precision() ? spot.z_precision() : 75.f;
 			l.channel = spot.has_channel() ? spot.channel() : -1;
 			l.frame = spot.has_frame() ? spot.frame() : 0;
+
+			if (spot.location_units() == TSF::UM) {
+				l.x *= 1000.f;
+				l.y *= 1000.f;
+				l.z *= 1000.f;
+			} else if (spot.location_units() == TSF::PIXELS) {
+				l.x *= m_pixelSize;
+				l.y *= m_pixelSize;
+				l.z *= m_pixelSize;
+			}
+
+			m_minZ = std::min(m_minZ, l.z);
+			m_maxZ = std::max(m_maxZ, l.z);
 
 			push_back(l);
 		}
