@@ -25,6 +25,7 @@
 #include "Localizations.h"
 #include "DensityFilter.h"
 #include "Device.h"
+#include "GaussianFilter.h"
 
 #include <chrono>
 #include <iostream>
@@ -130,7 +131,21 @@ void MainWindow::showEvent(QShowEvent *event)
 			drawPSF(m_volume.data(), l, dims, voxelSize, 5);
 		}
 
-		m_ui->widget->setVolume(m_volume);
+		m_filteredVolume = Volume(dims, voxelSize, {0.f, 0.f, locs.minZ()});
+
+#if 1
+		// filter by density GPU
+		start = std::chrono::steady_clock::now();
+
+		GaussianFilter::gaussianFilter_gpu(m_volume.constData(), m_filteredVolume.data(), m_volume.width(), m_volume.height(), m_volume.depth(), 7, 1.5f);
+
+		end = std::chrono::steady_clock::now();
+		dur = std::chrono::duration<double>(end - start);
+
+		std::cout << "Gaussian filter (GPU): " << locs.size()  << " in " << dur.count() << " s" << std::endl;
+#endif
+
+		m_ui->widget->setVolume(m_filteredVolume);
 	} catch(std::exception &e) {
 		m_ui->statusbar->showMessage(tr("Error: ") + e.what());
 		std::cerr << std::string("Error: ") + e.what() << std::endl;

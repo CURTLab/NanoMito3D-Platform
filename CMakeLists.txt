@@ -25,6 +25,7 @@ set(PROJECT_SOURCES
     kernels/DensityFilterGPU.cu
     kernels/DensityFilterCPU.cpp
     kernels/Device.cu
+    kernels/GaussianFilterGPU.cu
     main.cpp
     MainWindow.cpp MainWindow.h MainWindow.ui
     VolumeWidget.h VolumeWidget.cpp
@@ -34,6 +35,7 @@ set(PROJECT_SOURCES
     Bounds.h
     Device.h
     DensityFilter.h
+    GaussianFilter.h
 )
 
 # Protobuf stuff

@@ -24,7 +24,7 @@
 
 #include "Octree.h"
 
-Localizations::const_iterator DensityFilter::remove_cpu(Localizations &locs, int minPoints, float radius)
+Localizations::const_iterator DensityFilter::remove_cpu(Localizations &locs, size_t minPoints, float radius)
 {
 	// filter by density
 	Octree<uint32_t,float,50> tree(locs.bounds());

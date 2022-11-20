@@ -19,17 +19,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ****************************************************************************/
-#ifndef DENSITYFILTER_H
-#define DENSITYFILTER_H
 
-#include "Localizations.h"
+#ifndef GAUSSIANFILTER_H
+#define GAUSSIANFILTER_H
 
-namespace DensityFilter
+#include <stdint.h>
+
+namespace GaussianFilter
 {
 
-Localizations::const_iterator remove_gpu(Localizations &locs, size_t minPoints, float radius);
-Localizations::const_iterator remove_cpu(Localizations &locs, size_t minPoints, float radius);
+void gaussianFilter_gpu(const uint8_t *input, uint8_t *output, int width, int height, int depth, int size, float sigma);
 
 }
 
-#endif // DENSITYFILTER_H
+#endif // GAUSSIANFILTER_H
