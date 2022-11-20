@@ -19,41 +19,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ****************************************************************************/
+#ifndef LOCALTHRESHOLD_H
+#define LOCALTHRESHOLD_H
 
-#include "../Device.h"
+#include "Volume.h"
 
-#include <stdexcept>
+#define VOLUMEFILTER_MAXSIZE 17
 
-namespace GPU {
-
-static bool IS_DEVICE_AVAILABLE = false;
-static bool INITIALIZED = false;
-
-}
-
-void GPU::initGPU() {
-	if (INITIALIZED)
-		return;
-	double hTmp = 1;
-	double *dTmp;
-	cudaMalloc(&dTmp, sizeof(double));
-	cudaMemcpy(dTmp, &hTmp, sizeof(double), cudaMemcpyHostToDevice);
-	cudaFree(dTmp);
-
-	int nDevices = 0;
-	cudaGetDeviceCount(&nDevices);
-	IS_DEVICE_AVAILABLE = nDevices > 0;
-}
-
-bool GPU::isGPUAvailable()
+namespace LocalThreshold
 {
-	initGPU();
-	return IS_DEVICE_AVAILABLE;
+
+enum Method {
+	Otsu,
+	IsoData
+};
+
+void localThrehsold_gpu(Method method, Volume input, Volume output, int windowSize);
+
 }
 
-void GPU::cudaCheckError()
-{
-	cudaError_t err = cudaGetLastError();
-	if (err != cudaSuccess)
-		throw std::runtime_error(std::string("Cuda error ") + cudaGetErrorName(err) + ": " + cudaGetErrorString(err));
-}
+#endif // LOCALTHRESHOLD_H

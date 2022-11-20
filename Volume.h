@@ -25,6 +25,8 @@
 #include <memory>
 #include <array>
 
+#include "Device.h"
+
 class VolumeData;
 
 class Volume final
@@ -40,19 +42,23 @@ public:
 
 	void fill(uint8_t value);
 
-	int width() const;
-	int height() const;
-	int depth() const;
-	std::array<int, 3> size() const;
+	int width() const noexcept;
+	int height() const noexcept;
+	int depth() const noexcept;
+	std::array<int, 3> size() const noexcept;
 
-	size_t voxels() const;
+	size_t voxels() const noexcept;
 
-	const std::array<float,3> &voxelSize() const;
-	const std::array<float,3> &origin() const;
+	const std::array<float,3> &voxelSize() const noexcept;
+	const std::array<float,3> &origin() const noexcept;
 
-	uint8_t *data();
-	const uint8_t *constData() const;
 
+	bool copyTo(DeviceType device);
+
+	uint8_t *alloc(DeviceType device);
+
+	uint8_t *data(DeviceType device = DeviceType::Host);
+	const uint8_t *constData(DeviceType device = DeviceType::Host) const noexcept;
 
 private:
 	std::shared_ptr<VolumeData> d;

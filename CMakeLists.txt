@@ -28,6 +28,7 @@ set(PROJECT_SOURCES
     kernels/GaussianFilterGPU.cu
     kernels/RenderingCPU.cpp
     kernels/RenderingGPU.cu
+    kernels/LocalThresholdGPU.cu
     main.cpp
     MainWindow.cpp MainWindow.h MainWindow.ui
     VolumeWidget.h VolumeWidget.cpp
@@ -39,6 +40,7 @@ set(PROJECT_SOURCES
     DensityFilter.h
     GaussianFilter.h
     Rendering.h
+    LocalThreshold.h
 )
 
 # Protobuf stuff

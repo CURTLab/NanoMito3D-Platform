@@ -21,6 +21,9 @@
  ****************************************************************************/
 #include "Volume.h"
 
+#include <cuda_runtime_api.h>
+#include <stdexcept>
+
 class VolumeData
 {
 public:
@@ -29,7 +32,7 @@ public:
 		, voxelSize{1.f, 1.f, 1.f}
 		, origin{0.f, 0.f, 0.f}
 		, voxels(0)
-		, data(nullptr)
+		, dData(nullptr)
 	{
 	}
 
@@ -38,15 +41,21 @@ public:
 		, voxelSize(voxelSize)
 		, origin(origin)
 		, voxels(static_cast<size_t>(dims[0]) * dims[1] * dims[2])
+		, dData(nullptr)
 	{
-		data.reset(new uint8_t[voxels]);
+		hData.reset(new uint8_t[voxels]);
+	}
+
+	~VolumeData() {
+		cudaFree(dData);
 	}
 
 	std::array<int, 3> dims;
 	std::array<float, 3> voxelSize;
 	std::array<float, 3> origin;
 	size_t voxels;
-	std::unique_ptr<uint8_t[]> data;
+	std::unique_ptr<uint8_t[]> hData;
+	uint8_t *dData;
 
 };
 
@@ -84,50 +93,86 @@ Volume &Volume::operator=(const Volume &other)
 
 void Volume::fill(uint8_t value)
 {
-	std::fill_n(d->data.get(), d->voxels, value);
+	std::fill_n(d->hData.get(), d->voxels, value);
 }
 
-int Volume::width() const
+int Volume::width() const noexcept
 {
 	return d->dims[0];
 }
 
-int Volume::height() const
+int Volume::height() const noexcept
 {
 	return d->dims[1];
 }
 
-int Volume::depth() const
+int Volume::depth() const noexcept
 {
 	return d->dims[2];
 }
 
-std::array<int, 3> Volume::size() const
+std::array<int, 3> Volume::size() const noexcept
 {
 	return d->dims;
 }
 
-size_t Volume::voxels() const
+size_t Volume::voxels() const noexcept
 {
 	return d->voxels;
 }
 
-const std::array<float,3> &Volume::voxelSize() const
+const std::array<float,3> &Volume::voxelSize() const noexcept
 {
 	return d->voxelSize;
 }
 
-const std::array<float,3> &Volume::origin() const
+const std::array<float,3> &Volume::origin() const noexcept
 {
 	return d->origin;
 }
 
-uint8_t *Volume::data()
+bool Volume::copyTo(DeviceType device)
 {
-	return d->data.get();
+	if (device == DeviceType::Device) {
+		if (d->dData == nullptr) {
+			cudaMalloc((void**)&d->dData, d->voxels);
+			GPU::cudaCheckError();
+		}
+		if (cudaMemcpy(d->dData, d->hData.get(), d->voxels, cudaMemcpyHostToDevice) != cudaSuccess)
+			throw std::runtime_error("Could not copy localizations from host to device!");
+		return true;
+	} else if (device == DeviceType::Host) {
+		if (d->dData == nullptr)
+			throw std::runtime_error("No device data allocated!");
+		if (cudaMemcpy(d->hData.get(), d->dData, d->voxels, cudaMemcpyDeviceToHost) != cudaSuccess)
+			throw std::runtime_error("Could not copy localizations from device to host!");
+		return true;
+	}
+	return false;
 }
 
-const uint8_t *Volume::constData() const
+uint8_t *Volume::alloc(DeviceType device)
 {
-	return d->data.get();
+	if (device == DeviceType::Device) {
+		if (d->dData == nullptr) {
+			if (cudaMalloc((void**)&d->dData, d->voxels) != cudaSuccess)
+				throw std::runtime_error("Could allocate device memory!");
+		}
+		return d->dData;
+	} else if (device == DeviceType::Host) {
+		return d->hData.get();
+	}
+	return nullptr;
+}
+
+uint8_t *Volume::data(DeviceType device)
+{
+	if ((device == DeviceType::Device) && (d->dData == nullptr))
+		throw std::runtime_error("No device data allocated!");
+	return device == DeviceType::Device ? d->dData : d->hData.get();
+}
+
+const uint8_t *Volume::constData(DeviceType device) const noexcept
+{
+	return device == DeviceType::Device ? d->dData : d->hData.get();
 }

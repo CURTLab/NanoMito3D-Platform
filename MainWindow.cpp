@@ -27,6 +27,7 @@
 #include "Device.h"
 #include "GaussianFilter.h"
 #include "Rendering.h"
+#include "LocalThreshold.h"
 
 #include <chrono>
 #include <iostream>
@@ -97,8 +98,6 @@ void MainWindow::showEvent(QShowEvent *event)
 		// 3D rendering
 		start = std::chrono::steady_clock::now();
 
-		//m_volume = Rendering::render_cpu(locs, voxelSize, 5);
-
 		locs.copyTo(DeviceType::Device);
 		m_volume = Rendering::render_gpu(locs, voxelSize, 5);
 
@@ -117,6 +116,17 @@ void MainWindow::showEvent(QShowEvent *event)
 		dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 
 		std::cout << "Gaussian filter (GPU): " << dur.count() << " s" << std::endl;
+#endif
+
+#if 1
+		// gaussian filter 3D
+		start = std::chrono::steady_clock::now();
+
+		LocalThreshold::localThrehsold_gpu(LocalThreshold::IsoData, m_filteredVolume, m_filteredVolume, 11);
+
+		dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
+
+		std::cout << "Local threshold filter (GPU): " << dur.count() << " s" << std::endl;
 #endif
 
 		m_ui->widget->setVolume(m_filteredVolume);
