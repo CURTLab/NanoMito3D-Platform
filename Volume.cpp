@@ -33,8 +33,8 @@ public:
 	{
 	}
 
-	inline VolumeData(const int dims[3], const std::array<float,3> &voxelSize, const std::array<float, 3> &origin)
-		: dims{dims[0], dims[1], dims[2]}
+	inline VolumeData(const std::array<int,3> &dims, const std::array<float,3> &voxelSize, const std::array<float, 3> &origin)
+		: dims(dims)
 		, voxelSize(voxelSize)
 		, origin(origin)
 		, voxels(static_cast<size_t>(dims[0]) * dims[1] * dims[2])
@@ -57,15 +57,13 @@ Volume::Volume()
 }
 
 Volume::Volume(const int dims[], const float voxelSize[], std::array<float, 3> origin)
-	: d(new VolumeData(dims, {voxelSize[0], voxelSize[1], voxelSize[2]}, origin))
+	: d(new VolumeData({dims[0], dims[1], dims[2]}, {voxelSize[0], voxelSize[1], voxelSize[2]}, origin))
 {
-
 }
 
-Volume::Volume(const int dims[], const std::array<float, 3> voxelSize, std::array<float, 3> origin)
+Volume::Volume(const std::array<int, 3> dims, const std::array<float, 3> voxelSize, std::array<float, 3> origin)
 	: d(new VolumeData(dims, voxelSize, origin))
 {
-
 }
 
 Volume::Volume(const Volume &other)
@@ -102,6 +100,11 @@ int Volume::height() const
 int Volume::depth() const
 {
 	return d->dims[2];
+}
+
+std::array<int, 3> Volume::size() const
+{
+	return d->dims;
 }
 
 size_t Volume::voxels() const

@@ -19,44 +19,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ****************************************************************************/
-#ifndef VOLUME_H
-#define VOLUME_H
 
-#include <memory>
-#include <array>
+#ifndef RENDERING_H
+#define RENDERING_H
 
-class VolumeData;
+#include "Localizations.h"
+#include "Volume.h"
 
-class Volume final
-{
-public:
-	Volume();
-	Volume(const int dims[3], const float voxelSize[3], std::array<float,3> origin = {0.f});
-	Volume(const std::array<int,3> dims, const std::array<float,3> voxelSize, std::array<float,3> origin = {0.f});
-	Volume(const Volume &other);
-	~Volume();
+namespace Rendering {
 
-	Volume &operator=(const Volume &other);
+Volume render_gpu(const Localizations &locs, std::array<float,3> voxelSize, int windowSize);
+Volume render_cpu(const Localizations &locs, std::array<float,3> voxelSize, int windowSize);
 
-	void fill(uint8_t value);
+}
 
-	int width() const;
-	int height() const;
-	int depth() const;
-	std::array<int, 3> size() const;
-
-	size_t voxels() const;
-
-	const std::array<float,3> &voxelSize() const;
-	const std::array<float,3> &origin() const;
-
-	uint8_t *data();
-	const uint8_t *constData() const;
-
-
-private:
-	std::shared_ptr<VolumeData> d;
-
-};
-
-#endif // VOLUME_H
+#endif // RENDERING_H
