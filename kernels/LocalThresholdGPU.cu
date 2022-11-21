@@ -31,11 +31,11 @@
 #define BLOCK_SIZE2 16
 #define BLOCK_SIZE3 8
 
-__device__ uint8_t d_otsuThreshold(const uint16_t hist[256], int num_pixels)
+HOST_DEV uint8_t LocalThreshold::otsuThreshold(const uint16_t hist[256], int numPixels)
 {
 	int i;
 	uint8_t threshold = 0;
-	const float term = 1.f / num_pixels;
+	const float term = 1.f / numPixels;
 
 	float total_mean = 0.f;
 	for (i = 0; i < 256; ++i)
@@ -62,7 +62,7 @@ __device__ uint8_t d_otsuThreshold(const uint16_t hist[256], int num_pixels)
 	return threshold;
 }
 
-__device__ uint8_t d_isoDataThreshold(const uint16_t hist[256], int num_pixels)
+HOST_DEV uint8_t LocalThreshold::isoDataThreshold(const uint16_t hist[256], int numPixels)
 {
 	int i;
 
@@ -117,9 +117,9 @@ __global__ void local_threshold_kernel(LocalThreshold::Method method, const uint
 	}
 
 	if (method == LocalThreshold::Otsu)
-		d_output[idx] = (d_input[idx] > d_otsuThreshold(hist, num_pixels) ? 255 : 0);
+		d_output[idx] = (d_input[idx] >= LocalThreshold::otsuThreshold(hist, num_pixels) ? 255 : 0);
 	else if (method == LocalThreshold::IsoData)
-		d_output[idx] = (d_input[idx] > d_isoDataThreshold(hist, num_pixels) ? 255 : 0);
+		d_output[idx] = (d_input[idx] >= LocalThreshold::isoDataThreshold(hist, num_pixels) ? 255 : 0);
 	else
 		d_output[idx] = 0;
 }

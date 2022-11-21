@@ -22,10 +22,18 @@
 #ifndef DEVICE_H
 #define DEVICE_H
 
+#include <cuda_device_runtime_api.h>
+
 enum class DeviceType {
 	Host,
 	Device
 };
+
+#ifdef __CUDACC__
+#define HOST_DEV __device__ __host__
+#else
+#define HOST_DEV
+#endif
 
 namespace GPU {
 

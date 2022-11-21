@@ -29,6 +29,7 @@ set(PROJECT_SOURCES
     kernels/RenderingCPU.cpp
     kernels/RenderingGPU.cu
     kernels/LocalThresholdGPU.cu
+    kernels/LocalThresholdCPU.cpp
     main.cpp
     MainWindow.cpp MainWindow.h MainWindow.ui
     VolumeWidget.h VolumeWidget.cpp

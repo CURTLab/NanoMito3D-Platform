@@ -53,7 +53,9 @@ __global__ void filter3D_kernel(const uint8_t *d_input, uint8_t *d_output, int w
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
 	int z = blockIdx.z * blockDim.z + threadIdx.z;
 	int r = size/2;
-	int idx;
+	size_t idx;
+
+	const size_t stride[3] = {1ull, static_cast<size_t>(width), static_cast<size_t>(width) * height};
 
 	if (x >= width || y >= height || z >= depth)
 		return;
@@ -67,8 +69,8 @@ __global__ void filter3D_kernel(const uint8_t *d_input, uint8_t *d_output, int w
 			int yi = y + j;
 			for (int i = -r; i <= r; ++i, ++dk) {
 				int xi = x + i;
-				idx = xi + yi * width + zi * width * height;
 				if (xi >= 0 && xi < width && yi >= 0 && yi < height && zi >= 0 && zi < depth) {
+					idx = stride[0] * xi + stride[1] * yi + stride[2] * zi;
 					val += d_input[idx] * (*dk);
 					sum += *dk;
 				}
@@ -76,7 +78,7 @@ __global__ void filter3D_kernel(const uint8_t *d_input, uint8_t *d_output, int w
 		}
 	}
 
-	idx = x + y * width + z * width * height;
+	idx = stride[0] * x + stride[1] * y + stride[2] * z;
 	d_output[idx] = val / sum;
 }
 

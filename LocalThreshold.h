@@ -34,7 +34,11 @@ enum Method {
 	IsoData
 };
 
+HOST_DEV uint8_t otsuThreshold(const uint16_t hist[256], int numPixels);
+HOST_DEV uint8_t isoDataThreshold(const uint16_t hist[256], int numPixels);
+
 void localThrehsold_gpu(Method method, Volume input, Volume output, int windowSize);
+void localThrehsold_cpu(Method method, Volume input, Volume output, int windowSize);
 
 }
 
