@@ -43,6 +43,7 @@ public:
 
 	Volume &operator=(const Volume &other);
 
+	// fill the volume with value
 	void fill(uint8_t value);
 
 	// load a tiff stack as volume
@@ -71,6 +72,7 @@ public:
 
 	size_t voxels() const noexcept;
 
+	// object space
 	const std::array<float,3> &voxelSize() const noexcept;
 	const std::array<float,3> &origin() const noexcept;
 
@@ -86,10 +88,19 @@ public:
 	uint8_t *data(DeviceType device = DeviceType::Host);
 	const uint8_t *constData(DeviceType device = DeviceType::Host) const noexcept;
 
-	// helper functions
+	// helper functions to check if position is inside of the volume
 	bool contains(int x, int y, int z) const;
+
+	// count different voxels in two volumes
 	size_t countDifferences(const Volume &other) const;
+
+	// map voxel postions to object positions
 	std::array<float,3> mapVoxel(int x, int y, int z, bool centerVoxel = false) const;
+	// map object positions to voxel postions
+	std::array<int,3> invMapVoxel(float x, float y, float z) const;
+
+	// calculate histogram (cpu only)
+	std::array<uint32_t,256> hist() const;
 
 private:
 	std::shared_ptr<VolumeData> d;

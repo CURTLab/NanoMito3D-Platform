@@ -283,3 +283,20 @@ std::array<float, 3> Volume::mapVoxel(int x, int y, int z, bool centerVoxel) con
 										 z * d->voxelSize[2] + d->origin[2] + (centerVoxel ? 0.5f * d->voxelSize[2] : 0.f)
 	};
 }
+
+std::array<int, 3> Volume::invMapVoxel(float x, float y, float z) const
+{
+	return {static_cast<int>((x - d->origin[0])/d->voxelSize[0]),
+			  static_cast<int>((y - d->origin[1])/d->voxelSize[1]),
+			  static_cast<int>((z - d->origin[2])/d->voxelSize[2])};
+}
+
+std::array<uint32_t, 256> Volume::hist() const
+{
+	std::array<uint32_t, 256> hist;
+	std::fill(hist.begin(), hist.end(), uint32_t(0));
+
+	for (size_t i = 0; i < d->voxels; ++i)
+		hist[d->hData[i]]++;
+	return hist;
+}

@@ -126,8 +126,7 @@ void VolumeWidget::setVolume(Volume volume, std::array<double, 4> color, bool co
 	volumeProperty->SetScalarOpacity(compositeOpacity); // composite first.
 
 	vtkNew<vtkColorTransferFunction> colortf;
-	colortf->AddRGBPoint(0.0, 0.0, 0.0, 0.0);
-	colortf->AddRGBPoint(1.0, color[0], color[1], color[2]);
+	colortf->AddRGBPoint(0.0, color[0], color[1], color[2]);
 	volumeProperty->SetColor(colortf);
 
 	vtkNew<vtkVolume> vol;

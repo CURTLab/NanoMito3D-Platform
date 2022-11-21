@@ -30,6 +30,8 @@ std::tuple<Volume, int, Bounds<int>> Skeleton3D::Trees::extractVolume(const Volu
 {
 	Volume ret(volume.size(), volume.voxelSize(), volume.origin());
 	Volume visited(volume.size());
+	visited.fill(0);
+
 	const auto &t = at(tree);
 	Point p;
 	if (t.graph->root() != nullptr)
@@ -50,7 +52,7 @@ std::tuple<Volume, int, Bounds<int>> Skeleton3D::Trees::extractVolume(const Volu
 	stack.push(p);
 	while(!stack.empty()) {
 		Point u = stack.top(); stack.pop();
-		if (volume(u.x, u.y, u.z) > threshold) {
+		if (!visited(u.x, u.y, u.z) && (volume(u.x, u.y, u.z) > threshold)) {
 			ret.setValue(u.x, u.y, u.z, 255);
 			visited(u.x, u.y, u.z) = 1;
 
@@ -63,6 +65,7 @@ std::tuple<Volume, int, Bounds<int>> Skeleton3D::Trees::extractVolume(const Volu
 
 			++voxels;
 
+			// check all 26 neighbours
 			condAdd(u.x-1, u.y-1, u.z-1);
 			condAdd(u.x  , u.y-1, u.z-1);
 			condAdd(u.x+1, u.y-1, u.z-1);
