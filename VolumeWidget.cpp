@@ -43,6 +43,10 @@
 #include <vtkVolumeProperty.h>
 #include <vtkPiecewiseFunction.h>
 #include <vtkColorTransferFunction.h>
+#include <vtkSphereSource.h>
+#include <vtkGlyph3D.h>
+#include <vtkPolyData.h>
+#include <vtkPolyDataMapper.h>
 
 class VolumeWidgetPrivate : public QVTKOpenGLNativeWidget
 {
@@ -125,6 +129,39 @@ void VolumeWidget::setVolume(Volume volume)
 	vol->SetProperty(volumeProperty);
 
 	d->renderer->AddViewProp(vol);
+	d->renderer->ResetCamera();
+	d->renderWindow()->Render();
+}
+
+void VolumeWidget::addSpheres(const std::vector<std::array<float, 3> > &points, float r, std::array<double, 3> color)
+{
+	Q_D(VolumeWidget);
+
+	vtkNew<vtkPoints> pts;
+	for (size_t i = 0; i < points.size(); ++i)
+		pts->InsertPoint(i, points[i][0], points[i][1], points[i][2]);
+
+	vtkNew<vtkPolyData> profile;
+	profile->SetPoints(pts);
+
+	vtkNew<vtkSphereSource> sphereSource;
+	sphereSource->SetRadius(r);
+	sphereSource->Update();
+
+	vtkNew<vtkGlyph3D> balls;
+	balls->SetInputData(profile);
+	balls->SetSourceConnection(sphereSource->GetOutputPort());
+	balls->Update();
+
+	vtkNew<vtkPolyDataMapper> mapBalls;
+	mapBalls->SetInputConnection(balls->GetOutputPort());
+	mapBalls->Update();
+
+	vtkNew<vtkActor> ballActor;
+	ballActor->SetMapper(mapBalls);
+	ballActor->GetProperty()->SetColor(color[0], color[1], color[2]);
+
+	d->renderer->AddActor(ballActor);
 	d->renderer->ResetCamera();
 	d->renderWindow()->Render();
 }

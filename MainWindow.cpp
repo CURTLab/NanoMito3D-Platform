@@ -29,6 +29,7 @@
 #include "Rendering.h"
 #include "LocalThreshold.h"
 #include "Skeletonize3D.h"
+#include "AnalyzeSkeleton.h"
 
 #include <chrono>
 #include <iostream>
@@ -131,14 +132,39 @@ void MainWindow::showEvent(QShowEvent *event)
 		// skeleton 3D
 		start = std::chrono::steady_clock::now();
 
-		Skeleton3D::skeletonize(m_volume, m_skeleton);
+		Skeleton3D::skeletonize(m_filteredVolume, m_skeleton);
 
 		dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 
 		std::cout << "Skeltonize (CPU): " << dur.count() << " s" << std::endl;
 
+		// analyse skeleton 3D
+		start = std::chrono::steady_clock::now();
+
+		Skeleton3D::Analysis analysis;
+		auto trees = analysis.calculate(m_skeleton, {}, Skeleton3D::Analysis::NoPruning, true, 0.0, true);
+
+		dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
+
+		std::cout << "Analyse skeleton (CPU): " << dur.count() << " s" << std::endl;
+
+		std::vector<std::array<float,3>> junctions;
+		std::vector<std::array<float,3>> endPoints;
+		for (const auto &t : trees) {
+			for (const auto &j : t.junctionVoxels)
+				junctions.push_back(std::array<float,3>{j.x*voxelSize[0] + m_volume.origin()[0],
+																	 j.y*voxelSize[1] + m_volume.origin()[1],
+																	 j.z*voxelSize[2] + m_volume.origin()[2]});
+			for (const auto &p : t.endPoints)
+				endPoints.push_back(std::array<float,3>{p.x*voxelSize[0] + m_volume.origin()[0],
+																	 p.y*voxelSize[1] + m_volume.origin()[1],
+																	 p.z*voxelSize[2] + m_volume.origin()[2]});
+
+		}
+		m_ui->widget_2->addSpheres(endPoints, std::max({voxelSize[0], voxelSize[1], voxelSize[2]}), {1.f,0.f,0.f});
+
 		m_ui->widget->setVolume(m_volume);
-		m_ui->widget_2->setVolume(m_skeleton);
+		m_ui->widget_2->setVolume(analysis.taggedImage());
 	} catch(std::exception &e) {
 		m_ui->statusbar->showMessage(tr("Error: ") + e.what());
 		std::cerr << std::string("Error: ") + e.what() << std::endl;

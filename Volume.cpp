@@ -86,8 +86,8 @@ Volume::Volume()
 
 }
 
-Volume::Volume(const int dims[], const float voxelSize[], std::array<float, 3> origin)
-	: d(new VolumeData({dims[0], dims[1], dims[2]}, {voxelSize[0], voxelSize[1], voxelSize[2]}, origin))
+Volume::Volume(const std::array<int, 3> dims)
+	: d(new VolumeData(dims, {1.f, 1.f, 1.f}, {0.f, 0.f, 0.f}))
 {
 }
 
@@ -126,6 +126,17 @@ void Volume::setValue(int x, int y, int z, uint8_t value)
 {
 	if (d->inBounds(x, y, z))
 		d->hData[d->idx(x, y, z)] = value;
+}
+
+uint8_t &Volume::operator()(int x, int y, int z)
+{
+	assert(d->inBounds(x, y, z) && "out of bounds");
+	return d->hData[d->idx(x, y, z)];
+}
+
+bool Volume::contains(int x, int y, int z) const
+{
+	return d->inBounds(x, y, z);
 }
 
 const uint8_t &Volume::operator()(int x, int y, int z) const

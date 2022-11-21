@@ -34,9 +34,10 @@ class Volume final
 {
 public:
 	Volume();
-	Volume(const int dims[3], const float voxelSize[3], std::array<float,3> origin = {0.f});
+	Volume(const std::array<int,3> dims);
 	Volume(const std::array<int,3> dims, const std::array<float,3> voxelSize, std::array<float,3> origin = {0.f});
 	Volume(const Volume &other);
+
 	~Volume();
 
 	Volume &operator=(const Volume &other);
@@ -56,7 +57,10 @@ public:
 	{ setValue(pos[0], pos[1], pos[2], value); }
 
 	// get value at x, y, z without out of bound checks (assert in debug)
+	uint8_t &operator()(int x, int y, int z);
 	const uint8_t &operator()(int x, int y, int z) const;
+
+	bool contains(int x, int y, int z) const;
 
 	int width() const noexcept;
 	int height() const noexcept;

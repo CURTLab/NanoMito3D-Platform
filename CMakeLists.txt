@@ -42,6 +42,8 @@ set(PROJECT_SOURCES
     Rendering.h
     LocalThreshold.h
     Skeletonize3D.h Skeletonize3D.cpp
+    AnalyzeSkeleton.h AnalyzeSkeleton.cpp
+    SkeletonGraph.h SkeletonGraph.cpp
 )
 
 # Protobuf stuff

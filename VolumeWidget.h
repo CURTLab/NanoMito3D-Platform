@@ -38,6 +38,7 @@ public:
 	~VolumeWidget();
 
 	void setVolume(Volume volume);
+	void addSpheres(const std::vector<std::array<float,3>> &points, float r, std::array<double,3> color);
 
 private:
 	VolumeWidgetPrivate * const m_d;
