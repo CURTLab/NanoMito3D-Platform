@@ -25,6 +25,7 @@
 
 #include <memory>
 #include <array>
+#include <string>
 
 #include "Device.h"
 
@@ -43,6 +44,9 @@ public:
 	Volume &operator=(const Volume &other);
 
 	void fill(uint8_t value);
+
+	// load a tiff stack as volume
+	static Volume loadTif(const std::string &fileName, std::array<float,3> voxelSize = {1.f,1.f,1.f}, std::array<float,3> origin = {0.f});
 
 	// checks if value is in bounds
 	// returns value at x, y, z in case of in-bounds

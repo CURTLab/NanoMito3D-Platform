@@ -34,6 +34,8 @@
 #include <chrono>
 #include <iostream>
 
+#include <QMessageBox>
+
 MainWindow::MainWindow(QWidget *parent)
 	: QMainWindow(parent)
 	, m_ui(new Ui::MainWindow)
@@ -51,29 +53,43 @@ void MainWindow::showEvent(QShowEvent *event)
 {
 	QMainWindow::showEvent(event);
 
-//#ifdef QT_DEBUG
 	try {
-		auto start = std::chrono::steady_clock::now();
-
+#if 0
 		Localizations locs;
 		//locs.load(DEV_PATH "/examples/WOP_CD62p_AntiMito_C1000_dual_Cell4_dSTORM_red_blue_031_v3.tsf");
 		locs.load(DEV_PATH "/examples/WOP_CD62p_AntiMito_C1000_dual_dSTORM_red_blue_034_v3.tsf");
 		m_ui->statusbar->showMessage(tr("Loaded %1 localizations from file. %2 x %3 µm²").arg(locs.size()).arg(locs.width()*1E-3).arg(locs.height()*1E-3));
 
 		const std::array<float,3> voxelSize{85.f, 85.f, 25.f}; // nm
+		m_volume = render(locs, voxelSize, {100.f, 100.f, 150.f}, 2);
+		analyse(m_volume, 1.5);
+#else
+		m_volume = Volume::loadTif(DEV_PATH "/examples/bat-cochlea-volume.tif");
+		analyse(m_volume, 1.5f);
+#endif
+	} catch(std::exception &e) {
+		QMessageBox::critical(this, "Error", e.what());
+		std::cerr << std::string("Error: ") + e.what() << std::endl;
+	}
 
-		auto dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
-		std::cout << "Locs: " << locs.size() << " in " << dur.count() << " s" << std::endl;
+	//analyse(m_volume);
+}
 
+Volume MainWindow::render(Localizations &locs, std::array<float, 3> voxelSize, std::array<float, 3> maxPA, int channel)
+{
+	Volume ret;
+	try {
 #if 1
 		// filter localizations by channel and PA
-		start = std::chrono::steady_clock::now();
+		auto start = std::chrono::steady_clock::now();
 
-		locs.erase(std::remove_if(locs.begin(), locs.end(), [](const Localization &l) {
-			return (l.channel == 1 || l.PAx > 100 || l.PAy > 100 || l.PAz > 150);
+		locs.erase(std::remove_if(locs.begin(), locs.end(), [&maxPA,channel](const Localization &l) {
+			if (channel > 0 && l.channel != channel)
+				return true;
+			return (l.PAx > maxPA[0] || l.PAy > maxPA[1] || l.PAz > maxPA[2]);
 		}), locs.end());
 
-		dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
+		auto dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 		std::cout << "Filtered: " << locs.size() << " in " << dur.count() << " s" << std::endl;
 #endif
 
@@ -101,29 +117,39 @@ void MainWindow::showEvent(QShowEvent *event)
 		start = std::chrono::steady_clock::now();
 
 		locs.copyTo(DeviceType::Device);
-		m_volume = Rendering::render_gpu(locs, voxelSize, 5);
-
-		m_filteredVolume = Volume(m_volume.size(), voxelSize, {0.f, 0.f, locs.minZ()});
+		ret = Rendering::render_gpu(locs, voxelSize, 5);
 
 		dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 
 		std::cout << "Rendering (GPU): " << dur.count() << " s" << std::endl;
+	} catch(std::exception &e) {
+		QMessageBox::critical(this, "Rendering error", e.what());
+		std::cerr << std::string("Rendering Error: ") + e.what() << std::endl;
+	}
 
-#if 1
+	return ret;
+}
+
+void MainWindow::analyse(Volume &volume, float sigma)
+{
+	try {
+		Volume filteredVolume(volume.size(), volume.voxelSize(), volume.origin());
+
 		// gaussian filter 3D
-		start = std::chrono::steady_clock::now();
+		auto start = std::chrono::steady_clock::now();
 
-		GaussianFilter::gaussianFilter_gpu(m_volume.constData(), m_filteredVolume.data(), m_volume.width(), m_volume.height(), m_volume.depth(), 7, 1.5f);
+		const int windowSize = (int)(sigma * 4) | 1;
+		// default 7
+		GaussianFilter::gaussianFilter_gpu(volume.constData(), filteredVolume.data(), volume.width(), volume.height(), volume.depth(), windowSize, sigma);
 
-		dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
+		auto dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 
 		std::cout << "Gaussian filter (GPU): " << dur.count() << " s" << std::endl;
-#endif
 
 		// local thresholding 3D
 		start = std::chrono::steady_clock::now();
 
-		LocalThreshold::localThrehsold_gpu(LocalThreshold::IsoData, m_filteredVolume, m_filteredVolume, 11);
+		LocalThreshold::localThrehsold_gpu(LocalThreshold::IsoData, filteredVolume, filteredVolume, 11);
 
 		dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 
@@ -132,7 +158,7 @@ void MainWindow::showEvent(QShowEvent *event)
 		// skeleton 3D
 		start = std::chrono::steady_clock::now();
 
-		Skeleton3D::skeletonize(m_filteredVolume, m_skeleton);
+		Skeleton3D::skeletonize(filteredVolume, m_skeleton);
 
 		dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 
@@ -148,26 +174,19 @@ void MainWindow::showEvent(QShowEvent *event)
 
 		std::cout << "Analyse skeleton (CPU): " << dur.count() << " s" << std::endl;
 
-		std::vector<std::array<float,3>> junctions;
 		std::vector<std::array<float,3>> endPoints;
 		for (const auto &t : trees) {
-			for (const auto &j : t.junctionVoxels)
-				junctions.push_back(std::array<float,3>{j.x*voxelSize[0] + m_volume.origin()[0],
-																	 j.y*voxelSize[1] + m_volume.origin()[1],
-																	 j.z*voxelSize[2] + m_volume.origin()[2]});
 			for (const auto &p : t.endPoints)
-				endPoints.push_back(std::array<float,3>{p.x*voxelSize[0] + m_volume.origin()[0],
-																	 p.y*voxelSize[1] + m_volume.origin()[1],
-																	 p.z*voxelSize[2] + m_volume.origin()[2]});
-
+				endPoints.push_back(std::array<float,3>{p.x*volume.voxelSize()[0] + volume.origin()[0],
+																	 p.y*volume.voxelSize()[1] + volume.origin()[1],
+																	 p.z*volume.voxelSize()[2] + volume.origin()[2]});
 		}
-		m_ui->widget_2->addSpheres(endPoints, std::max({voxelSize[0], voxelSize[1], voxelSize[2]}), {1.f,0.f,0.f});
+		m_ui->widget_2->addSpheres(endPoints, std::max({volume.voxelSize()[0], volume.voxelSize()[1], volume.voxelSize()[2]}), {1.f,0.f,0.f});
 
-		m_ui->widget->setVolume(m_volume);
+		m_ui->widget->setVolume(filteredVolume);
 		m_ui->widget_2->setVolume(analysis.taggedImage());
 	} catch(std::exception &e) {
-		m_ui->statusbar->showMessage(tr("Error: ") + e.what());
-		std::cerr << std::string("Error: ") + e.what() << std::endl;
+		QMessageBox::critical(this, "Analyse error", e.what());
+		std::cerr << std::string("Analyse error: ") + e.what() << std::endl;
 	}
-//#endif
 }

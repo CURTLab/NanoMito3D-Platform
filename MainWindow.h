@@ -26,6 +26,7 @@
 #include <QMainWindow>
 #include <memory>
 #include "Volume.h"
+#include "Localizations.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -43,9 +44,11 @@ protected:
 	virtual void showEvent(QShowEvent *event);
 
 private:
+	Volume render(Localizations &locs, std::array<float,3> voxelSize, std::array<float,3> maxPA, int channel);
+	void analyse(Volume &volume, float sigma);
+
 	std::unique_ptr<Ui::MainWindow> m_ui;
 	Volume m_volume;
-	Volume m_filteredVolume;
 	Volume m_skeleton;
 
 };

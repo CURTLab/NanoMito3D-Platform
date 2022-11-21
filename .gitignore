@@ -2,3 +2,4 @@
 *.user
 proto/TSFProto.pb.*
 *.tsf
+*.tif

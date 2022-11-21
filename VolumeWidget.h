@@ -37,7 +37,7 @@ public:
 	VolumeWidget(QWidget *parent = nullptr);
 	~VolumeWidget();
 
-	void setVolume(Volume volume);
+	void setVolume(Volume volume, bool copyData = true);
 	void addSpheres(const std::vector<std::array<float,3>> &points, float r, std::array<double,3> color);
 
 private:

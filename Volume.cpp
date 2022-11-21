@@ -25,6 +25,7 @@
 #include <cuda_runtime_api.h>
 #include <stdexcept>
 #include <assert.h>
+#include <opencv2/opencv.hpp>
 
 class VolumeData
 {
@@ -115,6 +116,44 @@ Volume &Volume::operator=(const Volume &other)
 void Volume::fill(uint8_t value)
 {
 	std::fill_n(d->hData, d->voxels, value);
+}
+
+Volume Volume::loadTif(const std::string &fileName, std::array<float, 3> voxelSize, std::array<float, 3> origin)
+{
+	std::vector<cv::Mat> stack;
+	if (!cv::imreadmulti(fileName, stack, cv::IMREAD_GRAYSCALE) || stack.empty())
+		throw std::runtime_error("Could not load tif stack: " + fileName);
+	const int w = stack[0].cols, h = stack[0].rows;
+	Volume ret({w, h, (int)stack.size()}, voxelSize, origin);
+
+	auto type = stack[0].type();
+
+	// find min/max for not uint8 tifs
+	double min = 0., max = 255.;
+	if (type != CV_8UC1) {
+		cv::minMaxIdx(stack[0], &min, &max);
+		for (size_t i = 1; i < stack.size(); ++i) {
+			double tmpMin = 0., tmpMax = 0.;
+			cv::minMaxIdx(stack[i], &tmpMin, &tmpMax);
+			min = std::min(tmpMin, min);
+			max = std::max(tmpMax, max);
+		}
+	}
+
+	// copy each slice into the volume
+	const size_t zStride = static_cast<size_t>(w) * h;
+	uint8_t *ptr = ret.data();
+	for (size_t i = 0; i < stack.size(); ++i, ptr += zStride) {
+		if (type != CV_8UC1) {
+			cv::Mat dst(w, h, CV_8UC1, ptr);
+			stack[i].convertTo(dst, CV_8UC1, 255.0/(max-min), -min);
+			assert(dst.ptr() == ptr);
+		} else {
+			assert(stack[i].isContinuous());
+			std::copy_n(stack[i].ptr(), zStride, ptr);
+		}
+	}
+	return ret;
 }
 
 uint8_t Volume::value(int x, int y, int z, uint8_t defaultVal) const

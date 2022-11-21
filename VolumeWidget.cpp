@@ -88,16 +88,17 @@ VolumeWidget::~VolumeWidget()
 	delete m_d;
 }
 
-void VolumeWidget::setVolume(Volume volume)
+void VolumeWidget::setVolume(Volume volume, bool copyData)
 {
 	Q_D(VolumeWidget);
 
 	const size_t numPts = volume.voxels();
 
 	vtkNew<vtkUnsignedCharArray> scalars;
-	scalars->SetArray(volume.data(), numPts, 1);
-	//auto s = scalars->WritePointer(0, numPts);
-	//std::copy_n(volume.data(), numPts, s);
+	if (copyData)
+		std::copy_n(volume.data(), numPts, scalars->WritePointer(0, numPts));
+	else
+		scalars->SetArray(volume.data(), numPts, 1);
 
 	vtkNew<vtkStructuredPoints> imageData;
 	imageData->GetPointData()->SetScalars(scalars);
