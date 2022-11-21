@@ -28,6 +28,7 @@
 #include "GaussianFilter.h"
 #include "Rendering.h"
 #include "LocalThreshold.h"
+#include "Skeletonize3D.h"
 
 #include <chrono>
 #include <iostream>
@@ -118,8 +119,7 @@ void MainWindow::showEvent(QShowEvent *event)
 		std::cout << "Gaussian filter (GPU): " << dur.count() << " s" << std::endl;
 #endif
 
-#if 1
-		// gaussian filter 3D
+		// local thresholding 3D
 		start = std::chrono::steady_clock::now();
 
 		LocalThreshold::localThrehsold_gpu(LocalThreshold::IsoData, m_filteredVolume, m_filteredVolume, 11);
@@ -127,9 +127,18 @@ void MainWindow::showEvent(QShowEvent *event)
 		dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 
 		std::cout << "Local threshold filter (GPU): " << dur.count() << " s" << std::endl;
-#endif
 
-		m_ui->widget->setVolume(m_filteredVolume);
+		// skeleton 3D
+		start = std::chrono::steady_clock::now();
+
+		Skeleton3D::skeletonize(m_volume, m_skeleton);
+
+		dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
+
+		std::cout << "Skeltonize (CPU): " << dur.count() << " s" << std::endl;
+
+		m_ui->widget->setVolume(m_volume);
+		m_ui->widget_2->setVolume(m_skeleton);
 	} catch(std::exception &e) {
 		m_ui->statusbar->showMessage(tr("Error: ") + e.what());
 		std::cerr << std::string("Error: ") + e.what() << std::endl;

@@ -41,6 +41,7 @@ set(PROJECT_SOURCES
     GaussianFilter.h
     Rendering.h
     LocalThreshold.h
+    Skeletonize3D.h Skeletonize3D.cpp
 )
 
 # Protobuf stuff

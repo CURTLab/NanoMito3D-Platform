@@ -46,6 +46,7 @@ private:
 	std::unique_ptr<Ui::MainWindow> m_ui;
 	Volume m_volume;
 	Volume m_filteredVolume;
+	Volume m_skeleton;
 
 };
 

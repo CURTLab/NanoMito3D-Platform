@@ -19,10 +19,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ****************************************************************************/
+
 #include "Volume.h"
 
 #include <cuda_runtime_api.h>
 #include <stdexcept>
+#include <assert.h>
 
 class VolumeData
 {
@@ -32,6 +34,7 @@ public:
 		, voxelSize{1.f, 1.f, 1.f}
 		, origin{0.f, 0.f, 0.f}
 		, voxels(0)
+		, hData(nullptr)
 		, dData(nullptr)
 	{
 	}
@@ -40,21 +43,39 @@ public:
 		: dims(dims)
 		, voxelSize(voxelSize)
 		, origin(origin)
+		, stride{1ull, static_cast<size_t>(dims[0]), static_cast<size_t>(dims[0]) * dims[1]}
 		, voxels(static_cast<size_t>(dims[0]) * dims[1] * dims[2])
+		, hData(nullptr)
 		, dData(nullptr)
 	{
-		hData.reset(new uint8_t[voxels]);
+		hData = new uint8_t[voxels];
+		if (hData == nullptr)
+			throw std::runtime_error("Couldn't allocate data for volume!");
 	}
 
-	~VolumeData() {
+	inline ~VolumeData() {
+		delete [] hData;
+		hData = nullptr;
+
 		cudaFree(dData);
+		dData = nullptr;
 	}
+
+	inline constexpr bool inBounds(int x, int y, int z) const
+	{ return (x >= 0 && y >= 0 && z >= 0 && x < dims[0] && y < dims[1] && z < dims[2]); }
+
+	inline constexpr size_t idx(int x, int y, int z) const
+	{ return x * stride[0] + y * stride[1] + z * stride[2]; }
 
 	std::array<int, 3> dims;
 	std::array<float, 3> voxelSize;
 	std::array<float, 3> origin;
+	std::array<size_t, 3> stride;
+
 	size_t voxels;
-	std::unique_ptr<uint8_t[]> hData;
+	// host pointer, main data
+	uint8_t* hData;
+	// device data for cuda
 	uint8_t *dData;
 
 };
@@ -93,7 +114,24 @@ Volume &Volume::operator=(const Volume &other)
 
 void Volume::fill(uint8_t value)
 {
-	std::fill_n(d->hData.get(), d->voxels, value);
+	std::fill_n(d->hData, d->voxels, value);
+}
+
+uint8_t Volume::value(int x, int y, int z, uint8_t defaultVal) const
+{
+	return d->inBounds(x, y, z) ? d->hData[d->idx(x, y, z)] : defaultVal;
+}
+
+void Volume::setValue(int x, int y, int z, uint8_t value)
+{
+	if (d->inBounds(x, y, z))
+		d->hData[d->idx(x, y, z)] = value;
+}
+
+const uint8_t &Volume::operator()(int x, int y, int z) const
+{
+	assert(d->inBounds(x, y, z) && "out of bounds");
+	return d->hData[d->idx(x, y, z)];
 }
 
 int Volume::width() const noexcept
@@ -138,13 +176,13 @@ bool Volume::copyTo(DeviceType device)
 			cudaMalloc((void**)&d->dData, d->voxels);
 			GPU::cudaCheckError();
 		}
-		if (cudaMemcpy(d->dData, d->hData.get(), d->voxels, cudaMemcpyHostToDevice) != cudaSuccess)
+		if (cudaMemcpy(d->dData, d->hData, d->voxels, cudaMemcpyHostToDevice) != cudaSuccess)
 			throw std::runtime_error("Could not copy localizations from host to device!");
 		return true;
 	} else if (device == DeviceType::Host) {
 		if (d->dData == nullptr)
 			throw std::runtime_error("No device data allocated!");
-		if (cudaMemcpy(d->hData.get(), d->dData, d->voxels, cudaMemcpyDeviceToHost) != cudaSuccess)
+		if (cudaMemcpy(d->hData, d->dData, d->voxels, cudaMemcpyDeviceToHost) != cudaSuccess)
 			throw std::runtime_error("Could not copy localizations from device to host!");
 		return true;
 	}
@@ -160,7 +198,7 @@ uint8_t *Volume::alloc(DeviceType device)
 		}
 		return d->dData;
 	} else if (device == DeviceType::Host) {
-		return d->hData.get();
+		return d->hData;
 	}
 	return nullptr;
 }
@@ -169,10 +207,21 @@ uint8_t *Volume::data(DeviceType device)
 {
 	if ((device == DeviceType::Device) && (d->dData == nullptr))
 		throw std::runtime_error("No device data allocated!");
-	return device == DeviceType::Device ? d->dData : d->hData.get();
+	return device == DeviceType::Device ? d->dData : d->hData;
 }
 
 const uint8_t *Volume::constData(DeviceType device) const noexcept
 {
-	return device == DeviceType::Device ? d->dData : d->hData.get();
+	return device == DeviceType::Device ? d->dData : d->hData;
+}
+
+size_t Volume::countDifferences(const Volume &other) const
+{
+	if (other.d->voxels != d->voxels)
+		return std::max(other.d->voxels, d->voxels);
+
+	size_t diff = 0;
+	for (size_t i = 0; i < d->voxels; ++i)
+		diff += (d->hData[i] != other.d->hData[i]);
+	return diff;
 }

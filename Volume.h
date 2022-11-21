@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * Copyright (C) 2022 Fabian Hauser
  *
@@ -19,6 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ****************************************************************************/
+
 #ifndef VOLUME_H
 #define VOLUME_H
 
@@ -42,6 +43,21 @@ public:
 
 	void fill(uint8_t value);
 
+	// checks if value is in bounds
+	// returns value at x, y, z in case of in-bounds
+	// returns defaultVal in case of out-bounds
+	uint8_t value(int x, int y, int z, uint8_t defaultVal = 0) const;
+	inline uint8_t value(std::array<int,3> pos, uint8_t defaultVal = 0) const
+	{ return value(pos[0], pos[1], pos[2], defaultVal); }
+
+	// set value at x,y,z if value is in bounds
+	void setValue(int x, int y, int z, uint8_t value);
+	inline void setValue(std::array<int,3> pos, uint8_t value)
+	{ setValue(pos[0], pos[1], pos[2], value); }
+
+	// get value at x, y, z without out of bound checks (assert in debug)
+	const uint8_t &operator()(int x, int y, int z) const;
+
 	int width() const noexcept;
 	int height() const noexcept;
 	int depth() const noexcept;
@@ -52,13 +68,19 @@ public:
 	const std::array<float,3> &voxelSize() const noexcept;
 	const std::array<float,3> &origin() const noexcept;
 
-
+	// copy data:
+	// * DeviceType::Host: device to host (if device data is allocated)
+	// * DeviceType::Device: host to device (deivce data is allocated if null)
 	bool copyTo(DeviceType device);
 
+	// allocate device data
 	uint8_t *alloc(DeviceType device);
 
+	// return point to host or device data
 	uint8_t *data(DeviceType device = DeviceType::Host);
 	const uint8_t *constData(DeviceType device = DeviceType::Host) const noexcept;
+
+	size_t countDifferences(const Volume &other) const;
 
 private:
 	std::shared_ptr<VolumeData> d;

@@ -14,9 +14,12 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout">
+   <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
      <widget class="VolumeWidget" name="widget" native="true"/>
+    </item>
+    <item>
+     <widget class="VolumeWidget" name="widget_2" native="true"/>
     </item>
    </layout>
   </widget>
