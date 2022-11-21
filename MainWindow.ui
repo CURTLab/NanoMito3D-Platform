@@ -16,10 +16,7 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
-     <widget class="VolumeWidget" name="widget" native="true"/>
-    </item>
-    <item>
-     <widget class="VolumeWidget" name="widget_2" native="true"/>
+     <widget class="VolumeWidget" name="volumeView" native="true"/>
     </item>
    </layout>
   </widget>

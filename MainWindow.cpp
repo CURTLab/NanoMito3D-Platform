@@ -54,7 +54,7 @@ void MainWindow::showEvent(QShowEvent *event)
 	QMainWindow::showEvent(event);
 
 	try {
-#if 0
+#if 1
 		Localizations locs;
 		//locs.load(DEV_PATH "/examples/WOP_CD62p_AntiMito_C1000_dual_Cell4_dSTORM_red_blue_031_v3.tsf");
 		locs.load(DEV_PATH "/examples/WOP_CD62p_AntiMito_C1000_dual_dSTORM_red_blue_034_v3.tsf");
@@ -174,17 +174,17 @@ void MainWindow::analyse(Volume &volume, float sigma)
 
 		std::cout << "Analyse skeleton (CPU): " << dur.count() << " s" << std::endl;
 
+		m_ui->volumeView->setVolume(filteredVolume, {0., 0., 1., 0.4});
+
+		const float r = std::max({volume.voxelSize()[0], volume.voxelSize()[1], volume.voxelSize()[2]});
 		std::vector<std::array<float,3>> endPoints;
 		for (const auto &t : trees) {
+			m_ui->volumeView->addGraph(t.graph, m_skeleton, 0.5f * r, {0.f, 1.f, 0.f});
 			for (const auto &p : t.endPoints)
-				endPoints.push_back(std::array<float,3>{p.x*volume.voxelSize()[0] + volume.origin()[0],
-																	 p.y*volume.voxelSize()[1] + volume.origin()[1],
-																	 p.z*volume.voxelSize()[2] + volume.origin()[2]});
+				endPoints.push_back(m_skeleton.mapVoxel(p.x, p.y, p.z));
 		}
-		m_ui->widget_2->addSpheres(endPoints, std::max({volume.voxelSize()[0], volume.voxelSize()[1], volume.voxelSize()[2]}), {1.f,0.f,0.f});
+		m_ui->volumeView->addSpheres(endPoints, r, {1.f,0.f,0.f});
 
-		m_ui->widget->setVolume(filteredVolume);
-		m_ui->widget_2->setVolume(analysis.taggedImage());
 	} catch(std::exception &e) {
 		QMessageBox::critical(this, "Analyse error", e.what());
 		std::cerr << std::string("Analyse error: ") + e.what() << std::endl;

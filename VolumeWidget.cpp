@@ -48,6 +48,10 @@
 #include <vtkPolyData.h>
 #include <vtkPolyDataMapper.h>
 
+#include <vtkParametricSpline.h>
+#include <vtkParametricFunctionSource.h>
+#include <vtkTubeFilter.h>
+
 class VolumeWidgetPrivate : public QVTKOpenGLNativeWidget
 {
 public:
@@ -88,7 +92,7 @@ VolumeWidget::~VolumeWidget()
 	delete m_d;
 }
 
-void VolumeWidget::setVolume(Volume volume, bool copyData)
+void VolumeWidget::setVolume(Volume volume, std::array<double, 4> color, bool copyData)
 {
 	Q_D(VolumeWidget);
 
@@ -108,7 +112,8 @@ void VolumeWidget::setVolume(Volume volume, bool copyData)
 
 	vtkNew<vtkSmartVolumeMapper> volumeMapper;
 	//volumeMapper->SetBlendModeToIsoSurface();
-	volumeMapper->SetBlendModeToComposite(); // composite first
+	//volumeMapper->SetBlendModeToComposite(); // composite first
+	volumeMapper->SetBlendModeToMaximumIntensity();
 	volumeMapper->SetInputData(imageData);
 
 	vtkNew<vtkVolumeProperty> volumeProperty;
@@ -117,13 +122,13 @@ void VolumeWidget::setVolume(Volume volume, bool copyData)
 
 	vtkNew<vtkPiecewiseFunction> compositeOpacity;
 	compositeOpacity->AddPoint(0.0, 0.0);
-	compositeOpacity->AddPoint(255.0, 1.0);
+	compositeOpacity->AddPoint(255.0, color[3]);
 	volumeProperty->SetScalarOpacity(compositeOpacity); // composite first.
 
-	vtkNew<vtkColorTransferFunction> color;
-	color->AddRGBPoint(0.0, 0.0, 0.0, 1.0);
-	color->AddRGBPoint(255.0, 0.0, 0.0, 1.0);
-	volumeProperty->SetColor(color);
+	vtkNew<vtkColorTransferFunction> colortf;
+	colortf->AddRGBPoint(0.0, 0.0, 0.0, 0.0);
+	colortf->AddRGBPoint(1.0, color[0], color[1], color[2]);
+	volumeProperty->SetColor(colortf);
 
 	vtkNew<vtkVolume> vol;
 	vol->SetMapper(volumeMapper);
@@ -163,6 +168,61 @@ void VolumeWidget::addSpheres(const std::vector<std::array<float, 3> > &points, 
 	ballActor->GetProperty()->SetColor(color[0], color[1], color[2]);
 
 	d->renderer->AddActor(ballActor);
+	d->renderer->ResetCamera();
+	d->renderWindow()->Render();
+}
+
+void VolumeWidget::addGraph(std::shared_ptr<SkeletonGraph> graph, const Volume &volume, float r, std::array<double,3> color)
+{
+	Q_D(VolumeWidget);
+
+	auto edges = graph->edgeList();
+	if (edges.empty())
+		return;
+
+	for (const auto &edge : edges) {
+		vtkNew<vtkPoints> points;
+		if (edge->v1 >= 0) {
+			const auto v1 = graph->vertex(edge->v1);
+			auto pos = volume.mapVoxel(v1->firstPoint().x, v1->firstPoint().y, v1->firstPoint().z);
+			points->InsertNextPoint(pos[0], pos[1], pos[2]);
+		}
+
+		for (int i = 0; i < edge->slab.size(); ++i) {
+			auto pos = volume.mapVoxel(edge->slab[i].x, edge->slab[i].y, edge->slab[i].z);
+			points->InsertNextPoint(pos[0], pos[1], pos[2]);
+		}
+
+		if (edge->v2 >= 0) {
+			const auto v2 = graph->vertex(edge->v2);
+			auto pos = volume.mapVoxel(v2->firstPoint().x, v2->firstPoint().y, v2->firstPoint().z);
+			points->InsertNextPoint(pos[0], pos[1], pos[2]);
+		}
+
+		// Fit a spline to the points
+		vtkNew<vtkParametricSpline> spline;
+		spline->SetPoints(points);
+
+		vtkNew<vtkParametricFunctionSource> functionSource;
+		functionSource->SetParametricFunction(spline);
+		//functionSource->SetUResolution(10 * points->GetNumberOfPoints());
+		functionSource->Update();
+
+		// Create the tubes
+		vtkNew<vtkTubeFilter> tuber;
+		tuber->SetInputData(functionSource->GetOutput());
+		tuber->SetNumberOfSides(6);
+		tuber->SetRadius(r); // in nm
+
+		vtkNew<vtkPolyDataMapper> tubeMapper;
+		tubeMapper->SetInputConnection(tuber->GetOutputPort());
+
+		vtkNew<vtkActor> actor;
+		actor->SetMapper(tubeMapper);
+		actor->GetProperty()->SetColor(color[0], color[1], color[2]);
+
+		d->renderer->AddActor(actor);
+	}
 	d->renderer->ResetCamera();
 	d->renderWindow()->Render();
 }

@@ -26,6 +26,7 @@
 #include <QWidget>
 
 #include "Volume.h"
+#include "SkeletonGraph.h"
 
 class VolumeWidgetPrivate;
 
@@ -37,8 +38,9 @@ public:
 	VolumeWidget(QWidget *parent = nullptr);
 	~VolumeWidget();
 
-	void setVolume(Volume volume, bool copyData = true);
+	void setVolume(Volume volume, std::array<double,4> color, bool copyData = true);
 	void addSpheres(const std::vector<std::array<float,3>> &points, float r, std::array<double,3> color);
+	void addGraph(std::shared_ptr<SkeletonGraph> graph, const Volume &volume, float r, std::array<double,3> color);
 
 private:
 	VolumeWidgetPrivate * const m_d;

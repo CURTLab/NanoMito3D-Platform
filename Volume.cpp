@@ -173,11 +173,6 @@ uint8_t &Volume::operator()(int x, int y, int z)
 	return d->hData[d->idx(x, y, z)];
 }
 
-bool Volume::contains(int x, int y, int z) const
-{
-	return d->inBounds(x, y, z);
-}
-
 const uint8_t &Volume::operator()(int x, int y, int z) const
 {
 	assert(d->inBounds(x, y, z) && "out of bounds");
@@ -265,6 +260,11 @@ const uint8_t *Volume::constData(DeviceType device) const noexcept
 	return device == DeviceType::Device ? d->dData : d->hData;
 }
 
+bool Volume::contains(int x, int y, int z) const
+{
+	return d->inBounds(x, y, z);
+}
+
 size_t Volume::countDifferences(const Volume &other) const
 {
 	if (other.d->voxels != d->voxels)
@@ -274,4 +274,12 @@ size_t Volume::countDifferences(const Volume &other) const
 	for (size_t i = 0; i < d->voxels; ++i)
 		diff += (d->hData[i] != other.d->hData[i]);
 	return diff;
+}
+
+std::array<float, 3> Volume::mapVoxel(int x, int y, int z, bool centerVoxel) const
+{
+	return std::array<float, 3>{x * d->voxelSize[0] + d->origin[0] + (centerVoxel ? 0.5f * d->voxelSize[0] : 0.f),
+										 y * d->voxelSize[1] + d->origin[1] + (centerVoxel ? 0.5f * d->voxelSize[1] : 0.f),
+										 z * d->voxelSize[2] + d->origin[2] + (centerVoxel ? 0.5f * d->voxelSize[2] : 0.f)
+	};
 }

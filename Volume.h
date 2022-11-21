@@ -64,8 +64,6 @@ public:
 	uint8_t &operator()(int x, int y, int z);
 	const uint8_t &operator()(int x, int y, int z) const;
 
-	bool contains(int x, int y, int z) const;
-
 	int width() const noexcept;
 	int height() const noexcept;
 	int depth() const noexcept;
@@ -88,7 +86,10 @@ public:
 	uint8_t *data(DeviceType device = DeviceType::Host);
 	const uint8_t *constData(DeviceType device = DeviceType::Host) const noexcept;
 
+	// helper functions
+	bool contains(int x, int y, int z) const;
 	size_t countDifferences(const Volume &other) const;
+	std::array<float,3> mapVoxel(int x, int y, int z, bool centerVoxel = false) const;
 
 private:
 	std::shared_ptr<VolumeData> d;
