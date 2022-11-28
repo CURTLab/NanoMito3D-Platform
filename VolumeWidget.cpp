@@ -52,6 +52,9 @@
 #include <vtkParametricFunctionSource.h>
 #include <vtkTubeFilter.h>
 
+#include <vtkCubeAxesActor.h>
+#include <vtkTextProperty.h>
+
 class VolumeWidgetPrivate : public QVTKOpenGLNativeWidget
 {
 public:
@@ -107,8 +110,8 @@ void VolumeWidget::setVolume(Volume volume, std::array<double, 4> color, bool co
 	vtkNew<vtkStructuredPoints> imageData;
 	imageData->GetPointData()->SetScalars(scalars);
 	imageData->SetDimensions(volume.width(), volume.height(), volume.depth());
-	imageData->SetOrigin(volume.origin()[0], volume.origin()[1], volume.origin()[2]);
-	imageData->SetSpacing(volume.voxelSize()[0], volume.voxelSize()[1], volume.voxelSize()[2]);
+	imageData->SetOrigin(volume.origin()[0] * 1E-3, volume.origin()[1] * 1E-3, volume.origin()[2] * 1E-3);
+	imageData->SetSpacing(volume.voxelSize()[0] * 1E-3, volume.voxelSize()[1] * 1E-3, volume.voxelSize()[2] * 1E-3);
 
 	vtkNew<vtkSmartVolumeMapper> volumeMapper;
 	//volumeMapper->SetBlendModeToIsoSurface();
@@ -133,6 +136,51 @@ void VolumeWidget::setVolume(Volume volume, std::array<double, 4> color, bool co
 	vol->SetMapper(volumeMapper);
 	vol->SetProperty(volumeProperty);
 
+	vtkNew<vtkCubeAxesActor> cubeAxesActor;
+
+	cubeAxesActor->SetXLabelFormat("%-#3.1f");
+	cubeAxesActor->SetYLabelFormat("%-#3.1f");
+	cubeAxesActor->SetZLabelFormat("%-#3.1f");
+
+	cubeAxesActor->SetUseTextActor3D(1);
+	cubeAxesActor->SetBounds(vol->GetBounds());
+	cubeAxesActor->SetCamera(d->renderer->GetActiveCamera());
+	cubeAxesActor->SetXTitle("X / µm");
+	cubeAxesActor->SetYTitle("Y / µm");
+	cubeAxesActor->SetZTitle("Z / µm");
+	//cubeAxesActor->SetScreenSize(10);
+	cubeAxesActor->SetEnableDistanceLOD(0);
+	cubeAxesActor->SetEnableViewAngleLOD(0);
+
+#if 1
+	vtkNew<vtkStringArray> axisLabels;
+	vtkStdString s;
+	s.resize(64);
+	snprintf(s.data(), 64, "%3.1f", vol->GetBounds()[4]);
+	axisLabels->InsertNextValue(s);
+	snprintf(s.data(), 64, "%3.1f", vol->GetBounds()[5]);
+	axisLabels->InsertNextValue(s);
+	cubeAxesActor->SetAxisLabels(2, axisLabels);
+#endif
+
+	cubeAxesActor->DrawXGridlinesOn();
+	cubeAxesActor->DrawYGridlinesOn();
+	cubeAxesActor->DrawZGridlinesOn();
+#if VTK_MAJOR_VERSION == 6
+	cubeAxesActor->SetGridLineLocation(VTK_GRID_LINES_FURTHEST);
+#elif VTK_MAJOR_VERSION > 6
+	cubeAxesActor->SetGridLineLocation(cubeAxesActor->VTK_GRID_LINES_FURTHEST);
+#endif
+
+	cubeAxesActor->XAxisMinorTickVisibilityOff();
+	cubeAxesActor->YAxisMinorTickVisibilityOff();
+	cubeAxesActor->ZAxisMinorTickVisibilityOff();
+
+	cubeAxesActor->SetFlyModeToOuterEdges();
+	d->renderer->AddActor(cubeAxesActor);
+
+	//cubeAxesActor->PrintSelf(std::cout, vtkIndent(0));
+
 	d->renderer->AddViewProp(vol);
 	d->renderer->ResetCamera();
 	d->renderWindow()->Render();
@@ -144,13 +192,13 @@ void VolumeWidget::addSpheres(const std::vector<std::array<float, 3> > &points, 
 
 	vtkNew<vtkPoints> pts;
 	for (size_t i = 0; i < points.size(); ++i)
-		pts->InsertPoint(i, points[i][0], points[i][1], points[i][2]);
+		pts->InsertPoint(i, points[i][0] * 1E-3, points[i][1] * 1E-3, points[i][2] * 1E-3);
 
 	vtkNew<vtkPolyData> profile;
 	profile->SetPoints(pts);
 
 	vtkNew<vtkSphereSource> sphereSource;
-	sphereSource->SetRadius(r);
+	sphereSource->SetRadius(r * 1E-3);
 	sphereSource->Update();
 
 	vtkNew<vtkGlyph3D> balls;
@@ -184,18 +232,18 @@ void VolumeWidget::addGraph(std::shared_ptr<SkeletonGraph> graph, const Volume &
 		if (edge->v1 >= 0) {
 			const auto v1 = graph->vertex(edge->v1);
 			auto pos = volume.mapVoxel(v1->firstPoint().x, v1->firstPoint().y, v1->firstPoint().z);
-			points->InsertNextPoint(pos[0], pos[1], pos[2]);
+			points->InsertNextPoint(pos[0] * 1E-3, pos[1] * 1E-3, pos[2] * 1E-3);
 		}
 
 		for (int i = 0; i < edge->slab.size(); ++i) {
 			auto pos = volume.mapVoxel(edge->slab[i].x, edge->slab[i].y, edge->slab[i].z);
-			points->InsertNextPoint(pos[0], pos[1], pos[2]);
+			points->InsertNextPoint(pos[0] * 1E-3, pos[1] * 1E-3, pos[2] * 1E-3);
 		}
 
 		if (edge->v2 >= 0) {
 			const auto v2 = graph->vertex(edge->v2);
 			auto pos = volume.mapVoxel(v2->firstPoint().x, v2->firstPoint().y, v2->firstPoint().z);
-			points->InsertNextPoint(pos[0], pos[1], pos[2]);
+			points->InsertNextPoint(pos[0] * 1E-3, pos[1] * 1E-3, pos[2] * 1E-3);
 		}
 
 		// Fit a spline to the points
@@ -211,7 +259,7 @@ void VolumeWidget::addGraph(std::shared_ptr<SkeletonGraph> graph, const Volume &
 		vtkNew<vtkTubeFilter> tuber;
 		tuber->SetInputData(functionSource->GetOutput());
 		tuber->SetNumberOfSides(6);
-		tuber->SetRadius(r); // in nm
+		tuber->SetRadius(r * 1E-3); // in µm
 
 		vtkNew<vtkPolyDataMapper> tubeMapper;
 		tubeMapper->SetInputConnection(tuber->GetOutputPort());
