@@ -231,18 +231,18 @@ void VolumeWidget::addGraph(std::shared_ptr<SkeletonGraph> graph, const Volume &
 		vtkNew<vtkPoints> points;
 		if (edge->v1 >= 0) {
 			const auto v1 = graph->vertex(edge->v1);
-			auto pos = volume.mapVoxel(v1->firstPoint().x, v1->firstPoint().y, v1->firstPoint().z);
+			auto pos = volume.mapVoxel(v1->firstPoint().x, v1->firstPoint().y, v1->firstPoint().z, true);
 			points->InsertNextPoint(pos[0] * 1E-3, pos[1] * 1E-3, pos[2] * 1E-3);
 		}
 
 		for (int i = 0; i < edge->slab.size(); ++i) {
-			auto pos = volume.mapVoxel(edge->slab[i].x, edge->slab[i].y, edge->slab[i].z);
+			auto pos = volume.mapVoxel(edge->slab[i].x, edge->slab[i].y, edge->slab[i].z, true);
 			points->InsertNextPoint(pos[0] * 1E-3, pos[1] * 1E-3, pos[2] * 1E-3);
 		}
 
 		if (edge->v2 >= 0) {
 			const auto v2 = graph->vertex(edge->v2);
-			auto pos = volume.mapVoxel(v2->firstPoint().x, v2->firstPoint().y, v2->firstPoint().z);
+			auto pos = volume.mapVoxel(v2->firstPoint().x, v2->firstPoint().y, v2->firstPoint().z, true);
 			points->InsertNextPoint(pos[0] * 1E-3, pos[1] * 1E-3, pos[2] * 1E-3);
 		}
 

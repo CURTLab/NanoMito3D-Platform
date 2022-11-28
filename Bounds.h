@@ -38,15 +38,14 @@ public:
 		, minZ(pos[2]), maxZ(pos[2] + depth)
 	{}
 
-	inline constexpr bool contains(const std::array<T,3> &p) const
+	// check if point is contained within the bounds
+	inline constexpr bool contains(T x, T y, T z) const
 	{
-		return p[0] >= minX && p[0] <= maxX && p[1] >= minY && p[1] <= maxY && p[2] >= minZ && p[2] <= maxZ;
+		return x >= minX && x <= maxX && y >= minY && y <= maxY && z >= minZ && z <= maxZ;
 	}
+	inline constexpr bool contains(const std::array<T,3> &p) const { return contains(p[0], p[1], p[2]); }
 
-	inline constexpr std::array<T,3> origin() const
-	{
-		return {minX, minY, minZ};
-	}
+	inline constexpr std::array<T,3> origin() const { return {minX, minY, minZ}; }
 
 	inline constexpr std::array<T,3> originOffsetted(T dx, T dy, T dz) const
 	{
@@ -56,6 +55,18 @@ public:
 	inline constexpr T width() const  { return maxX - minX; }
 	inline constexpr T height() const { return maxY - minY; }
 	inline constexpr T depth() const  { return maxZ - minZ; }
+
+	// check each corner if it intersects
+	inline constexpr bool intersects(const Bounds<T> &b) const {
+		return contains(b.minX, b.minY, b.minZ) ||
+				 contains(b.maxX, b.minY, b.minZ) ||
+				 contains(b.minX, b.maxY, b.minZ) ||
+				 contains(b.minX, b.minY, b.maxZ) ||
+				 contains(b.maxX, b.maxY, b.minZ) ||
+				 contains(b.maxX, b.minY, b.maxZ) ||
+				 contains(b.minX, b.maxY, b.maxZ) ||
+				 contains(b.maxX, b.maxY, b.maxZ);
+	}
 
 	T minX, maxX;
 	T minY, maxY;

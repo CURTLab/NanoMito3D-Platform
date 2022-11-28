@@ -29,20 +29,21 @@
 
 struct Segment
 {
-	uint32_t numBranches;
-	uint32_t numEndPoints;
-	uint32_t numJunctionVoxels;
-	uint32_t numJunctions;
-	uint32_t numSlabs;
-	uint32_t numTriples;
-	uint32_t numQuadruples;
+	float numBranches;
+	float numEndPoints;
+	float numJunctionVoxels;
+	float numJunctions;
+	float numSlabs;
+	float numTriples;
+	float numQuadruples;
 	float averageBranchLength;
 	float maximumBranchLength;
 	float shortestPath;
-	uint32_t voxels;
-	uint32_t width;
-	uint32_t height;
-	uint32_t depth;
+	float voxels;
+	float width;
+	float height;
+	float depth;
+	float signalCount;
 };
 
 class Segments : public std::vector<Segment>

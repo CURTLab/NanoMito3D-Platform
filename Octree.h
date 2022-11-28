@@ -50,6 +50,9 @@ public:
 	inline bool isDivided() const noexcept;
 
 	inline size_t countInSphere(const std::array<P,3> &pos, P radius) const;
+	inline size_t countInBox(const Bounds<P> &bound) const;
+	inline size_t countInBox(const std::array<P,3> &pos, const std::array<P,3> &size) const
+	{ return countInBox(Bounds<P>(pos, size[0], size[1], size[2])); }
 
 private:
 	std::unique_ptr<Octree<T,P,CAPACITY>> m_childs[8];
@@ -143,6 +146,23 @@ size_t Octree<T, P, CAPACITY>::countInSphere(const std::array<P, 3> &pos, P radi
 	for (uint8_t i = 0; i < 8; ++i) {
 		if (m_childs[i])
 			counter += m_childs[i]->countInSphere(pos, radius);
+	}
+	return counter;
+}
+
+template<typename T, typename P, size_t CAPACITY>
+size_t Octree<T, P, CAPACITY>::countInBox(const Bounds<P> &bound) const
+{
+	size_t counter = 0;
+	if (!m_bounds.intersects(bound))
+		return counter;
+	for (size_t i = 0; i < m_size; ++i) {
+		if (bound.contains(m_data[i].first))
+			++counter;
+	}
+	for (uint8_t i = 0; i < 8; ++i) {
+		if (m_childs[i])
+			counter += m_childs[i]->countInBox(bound);
 	}
 	return counter;
 }
