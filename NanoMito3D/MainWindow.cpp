@@ -23,8 +23,8 @@
 #include "MainWindow.h"
 #include "ui_MainWindow.h"
 
-#include "common/Localizations.h"
-#include "common/Octree.h"
+#include "Localizations.h"
+#include "Octree.h"
 
 #include "DensityFilter.h"
 #include "Device.h"
@@ -74,9 +74,8 @@ void MainWindow::showEvent(QShowEvent *event)
 		analyse(m_volume, 1.5f);
 #endif
 	} catch(std::exception &e) {
-		QMessageBox::critical(this, "Error", e.what());
 		qCritical().nospace() << tr("Error: ") + e.what();
-
+		QMessageBox::critical(this, "Error", e.what());
 	}
 
 	//analyse(m_volume);

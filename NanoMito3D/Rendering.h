@@ -23,7 +23,7 @@
 #ifndef RENDERING_H
 #define RENDERING_H
 
-#include "common/Localizations.h"
+#include "Localizations.h"
 #include "Volume.h"
 
 namespace Rendering {

@@ -27,7 +27,7 @@
 #include <array>
 
 #include "Bounds.h"
-#include "Device.h"
+#include "Types.h"
 
 struct Localization
 {

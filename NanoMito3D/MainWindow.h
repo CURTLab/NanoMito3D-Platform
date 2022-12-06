@@ -20,21 +20,37 @@
  *
  ****************************************************************************/
 
-#include "DensityFilter.h"
+#ifndef MAINWINDOW_H
+#define MAINWINDOW_H
 
-#include "common/Octree.h"
+#include <QMainWindow>
+#include <memory>
+#include "Volume.h"
+#include "Localizations.h"
 
-Localizations::const_iterator DensityFilter::remove_cpu(Localizations &locs, size_t minPoints, float radius)
+QT_BEGIN_NAMESPACE
+namespace Ui { class MainWindow; }
+QT_END_NAMESPACE
+
+class MainWindow : public QMainWindow
 {
-	// filter by density
-	Octree<uint32_t,float,50> tree(locs.bounds());
-	for (uint32_t i = 0; i < locs.size(); ++i)
-		tree.insert(locs[i].position(), i);
+	Q_OBJECT
 
-	return std::remove_if(locs.begin(), locs.end(), [&tree](const Localization &l) {
-		const float radius = 250;
-		int minPoints = 10;
-		const auto pts = tree.countInSphere(l.position(), radius);
-		return pts < minPoints;
-	});
-}
+public:
+	MainWindow(QWidget *parent = nullptr);
+	~MainWindow();
+
+protected:
+	virtual void showEvent(QShowEvent *event);
+
+private:
+	Volume render(Localizations &locs, std::array<float,3> voxelSize, std::array<float,3> maxPA, int channel);
+	void analyse(Volume &volume, Localizations &locs, float sigma);
+
+	std::unique_ptr<Ui::MainWindow> m_ui;
+	Volume m_volume;
+	Volume m_skeleton;
+
+};
+
+#endif // MAINWINDOW_H

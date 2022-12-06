@@ -48,7 +48,7 @@ void Localizations::load(const std::string &fileName)
 
 	std::ifstream stream(fileName, std::ios_base::binary);
 	if (!stream) {
-		throw std::runtime_error("Could not open file!");
+		throw std::runtime_error("Could not open file (" + fileName + ")!");
 	}
 
 	int32_t magic = 1;

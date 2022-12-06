@@ -20,37 +20,12 @@
  *
  ****************************************************************************/
 
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#ifndef TYPES_H
+#define TYPES_H
 
-#include <QMainWindow>
-#include <memory>
-#include "Volume.h"
-#include "common/Localizations.h"
-
-QT_BEGIN_NAMESPACE
-namespace Ui { class MainWindow; }
-QT_END_NAMESPACE
-
-class MainWindow : public QMainWindow
-{
-	Q_OBJECT
-
-public:
-	MainWindow(QWidget *parent = nullptr);
-	~MainWindow();
-
-protected:
-	virtual void showEvent(QShowEvent *event);
-
-private:
-	Volume render(Localizations &locs, std::array<float,3> voxelSize, std::array<float,3> maxPA, int channel);
-	void analyse(Volume &volume, Localizations &locs, float sigma);
-
-	std::unique_ptr<Ui::MainWindow> m_ui;
-	Volume m_volume;
-	Volume m_skeleton;
-
+enum class DeviceType {
+	Host,
+	Device
 };
 
-#endif // MAINWINDOW_H
+#endif // TYPES_H

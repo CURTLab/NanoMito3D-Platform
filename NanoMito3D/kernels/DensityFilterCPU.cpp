@@ -19,17 +19,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ****************************************************************************/
-#ifndef DENSITYFILTER_H
-#define DENSITYFILTER_H
 
-#include "common/Localizations.h"
+#include "DensityFilter.h"
 
-namespace DensityFilter
+#include "Octree.h"
+
+Localizations::const_iterator DensityFilter::remove_cpu(Localizations &locs, size_t minPoints, float radius)
 {
+	// filter by density
+	Octree<uint32_t,float,50> tree(locs.bounds());
+	for (uint32_t i = 0; i < locs.size(); ++i)
+		tree.insert(locs[i].position(), i);
 
-Localizations::const_iterator remove_gpu(Localizations &locs, size_t minPoints, float radius);
-Localizations::const_iterator remove_cpu(Localizations &locs, size_t minPoints, float radius);
-
+	return std::remove_if(locs.begin(), locs.end(), [&tree](const Localization &l) {
+		const float radius = 250;
+		int minPoints = 10;
+		const auto pts = tree.countInSphere(l.position(), radius);
+		return pts < minPoints;
+	});
 }
-
-#endif // DENSITYFILTER_H

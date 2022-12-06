@@ -19,28 +19,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ****************************************************************************/
-#ifndef DEVICE_H
-#define DEVICE_H
+#ifndef DENSITYFILTER_H
+#define DENSITYFILTER_H
 
-#include <cuda_device_runtime_api.h>
+#include "Localizations.h"
 
-enum class DeviceType {
-	Host,
-	Device
-};
+namespace DensityFilter
+{
 
-#ifdef __CUDACC__
-#define HOST_DEV __device__ __host__
-#else
-#define HOST_DEV
-#endif
-
-namespace GPU {
-
-void initGPU();
-bool isGPUAvailable();
-void cudaCheckError();
+Localizations::const_iterator remove_gpu(Localizations &locs, size_t minPoints, float radius);
+Localizations::const_iterator remove_cpu(Localizations &locs, size_t minPoints, float radius);
 
 }
 
-#endif // DEVICE_H
+#endif // DENSITYFILTER_H

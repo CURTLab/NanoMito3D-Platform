@@ -25,7 +25,7 @@
 
 #include "SkeletonGraph.h"
 #include "Volume.h"
-#include "common/Bounds.h"
+#include "Bounds.h"
 
 namespace Skeleton3D
 {
