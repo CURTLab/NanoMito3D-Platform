@@ -83,7 +83,7 @@ __global__ void drawPSF_kernel(uint8_t *dVolume, const Localization *dLocs, uint
 	}
 }
 
-Volume Rendering::render_gpu(const Localizations &locs, std::array<float,3> voxelSize, int windowSize)
+Volume Rendering::render_gpu(Localizations &locs, std::array<float,3> voxelSize, int windowSize)
 {
 	int3 dims;
 	dims.x = static_cast<int>(std::ceilf(locs.width()  / voxelSize[0]));
@@ -96,6 +96,8 @@ Volume Rendering::render_gpu(const Localizations &locs, std::array<float,3> voxe
 	thrust::fill_n(dVolume.begin(), dVolume.size(), 0);
 
 	const uint32_t n = static_cast<uint32_t>(locs.size());
+
+	locs.copyTo(DeviceType::Device);
 
 	const dim3 block(BLOCK_SIZE);
 	const dim3 grid((n + block.x - 1)/block.x);

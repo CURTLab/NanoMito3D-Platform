@@ -28,8 +28,8 @@
 
 namespace Rendering {
 
-Volume render_gpu(const Localizations &locs, std::array<float,3> voxelSize, int windowSize);
-Volume render_cpu(const Localizations &locs, std::array<float,3> voxelSize, int windowSize);
+Volume render_gpu(Localizations &locs, std::array<float,3> voxelSize, int windowSize);
+Volume render_cpu(Localizations &locs, std::array<float,3> voxelSize, int windowSize);
 
 }
 

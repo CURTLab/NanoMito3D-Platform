@@ -49,7 +49,7 @@ void drawPSF(uint8_t *volume, const Localization &l, const std::array<int,3> &vo
 	}
 }
 
-Volume Rendering::render_cpu(const Localizations &locs, std::array<float,3> voxelSize, int windowSize)
+Volume Rendering::render_cpu(Localizations &locs, std::array<float,3> voxelSize, int windowSize)
 {
 	std::array<int,3> dims;
 	dims[0] = static_cast<int>(std::ceilf(locs.width()  / voxelSize[0]));

@@ -155,7 +155,7 @@ void Localizations::load(const std::string &fileName)
 bool Localizations::copyTo(DeviceType device)
 {
 	if (device == DeviceType::Device) {
-		if (m_dData == nullptr)
+		if ((m_dData == nullptr) || (m_dSize != size()))
 			alloc(DeviceType::Device, size());
 		if (cudaMemcpy(m_dData, data(), size() * sizeof(Localization), cudaMemcpyHostToDevice) != cudaSuccess)
 			throw std::runtime_error("Could not copy localizations from host to device!");

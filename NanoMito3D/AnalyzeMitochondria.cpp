@@ -20,40 +20,10 @@
  *
  ****************************************************************************/
 
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
-
-#include <QMainWindow>
-#include <memory>
-#include "Volume.h"
-#include "Localizations.h"
 #include "AnalyzeMitochondria.h"
 
-QT_BEGIN_NAMESPACE
-namespace Ui { class MainWindow; }
-QT_END_NAMESPACE
-
-class MainWindow : public QMainWindow
+AnalyzeMitochondria::AnalyzeMitochondria(QObject *parent)
+	: QObject{parent}
 {
-	Q_OBJECT
 
-public:
-	MainWindow(QWidget *parent = nullptr);
-	~MainWindow();
-
-protected:
-	virtual void showEvent(QShowEvent *event);
-
-private:
-	AnalyzeMitochondria m_analyis;
-
-	Volume render(Localizations &locs, std::array<float,3> voxelSize, std::array<float,3> maxPA, int channel);
-	void analyse(Volume &volume, Localizations &locs, float sigma);
-
-	std::unique_ptr<Ui::MainWindow> m_ui;
-	Volume m_volume;
-	Volume m_skeleton;
-
-};
-
-#endif // MAINWINDOW_H
+}

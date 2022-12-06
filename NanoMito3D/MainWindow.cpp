@@ -116,7 +116,11 @@ Volume MainWindow::render(Localizations &locs, std::array<float, 3> voxelSize, s
 #else
 		// filter by density GPU
 		start = std::chrono::steady_clock::now();
-		locs.erase(DensityFilter::remove_gpu(locs, 10, 250.f), locs.end());
+
+		if (m_ui->checkUseGPU->isChecked())
+			locs.erase(DensityFilter::remove_gpu(locs, 10, 250.f), locs.end());
+		else
+			locs.erase(DensityFilter::remove_cpu(locs, 10, 250.f), locs.end());
 
 		dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 
@@ -126,8 +130,10 @@ Volume MainWindow::render(Localizations &locs, std::array<float, 3> voxelSize, s
 		// 3D rendering
 		start = std::chrono::steady_clock::now();
 
-		locs.copyTo(DeviceType::Device);
-		ret = Rendering::render_gpu(locs, voxelSize, 5);
+		if (m_ui->checkUseGPU->isChecked())
+			ret = Rendering::render_gpu(locs, voxelSize, 5);
+		else
+			ret = Rendering::render_cpu(locs, voxelSize, 5);
 
 		dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 
