@@ -1,5 +1,6 @@
 
 *.user
-proto/TSFProto.pb.*
+common/proto/TSFProto.pb.*
 *.tsf
 *.tif
+common/Version.h

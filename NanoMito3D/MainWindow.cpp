@@ -23,6 +23,8 @@
 #include "MainWindow.h"
 #include "ui_MainWindow.h"
 
+#include "Version.h"
+
 #include "Localizations.h"
 #include "Octree.h"
 
@@ -47,6 +49,8 @@ MainWindow::MainWindow(QWidget *parent)
 	m_ui->setupUi(this);
 
 	GPU::initGPU();
+
+	setWindowTitle(tr("NanoMito3D r%1").arg(GIT_REVISION));
 }
 
 MainWindow::~MainWindow()

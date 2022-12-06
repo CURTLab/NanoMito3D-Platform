@@ -42,6 +42,7 @@ set(PROJECT_SOURCES
     AnalyzeSkeleton.h AnalyzeSkeleton.cpp
     SkeletonGraph.h SkeletonGraph.cpp
     Segments.h Segments.cpp
+    AnalyzeMitochindra.h AnalyzeMitochindra.cpp
 )
 
 include_directories(${CUDA_INCLUDE_DIRS} "../common")
