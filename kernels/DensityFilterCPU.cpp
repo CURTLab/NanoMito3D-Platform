@@ -22,7 +22,7 @@
 
 #include "DensityFilter.h"
 
-#include "Octree.h"
+#include "common/Octree.h"
 
 Localizations::const_iterator DensityFilter::remove_cpu(Localizations &locs, size_t minPoints, float radius)
 {

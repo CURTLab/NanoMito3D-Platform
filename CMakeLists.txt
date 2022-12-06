@@ -30,13 +30,14 @@ set(PROJECT_SOURCES
     kernels/RenderingGPU.cu
     kernels/LocalThresholdGPU.cu
     kernels/LocalThresholdCPU.cpp
+    common/Localizations.h
+    common/Localizations.cpp
+    common/Octree.h
+    common/Bounds.h
     main.cpp
     MainWindow.cpp MainWindow.h MainWindow.ui
     VolumeWidget.h VolumeWidget.cpp
-    Localizations.h Localizations.cpp
     Volume.h Volume.cpp
-    Octree.h
-    Bounds.h
     Device.h
     DensityFilter.h
     GaussianFilter.h

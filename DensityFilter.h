@@ -22,7 +22,7 @@
 #ifndef DENSITYFILTER_H
 #define DENSITYFILTER_H
 
-#include "Localizations.h"
+#include "common/Localizations.h"
 
 namespace DensityFilter
 {

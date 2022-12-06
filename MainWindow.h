@@ -26,7 +26,7 @@
 #include <QMainWindow>
 #include <memory>
 #include "Volume.h"
-#include "Localizations.h"
+#include "common/Localizations.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }

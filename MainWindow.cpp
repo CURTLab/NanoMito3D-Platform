@@ -22,7 +22,10 @@
 
 #include "MainWindow.h"
 #include "ui_MainWindow.h"
-#include "Localizations.h"
+
+#include "common/Localizations.h"
+#include "common/Octree.h"
+
 #include "DensityFilter.h"
 #include "Device.h"
 #include "GaussianFilter.h"
@@ -31,7 +34,6 @@
 #include "Skeletonize3D.h"
 #include "AnalyzeSkeleton.h"
 #include "Segments.h"
-#include "Octree.h"
 
 #include <chrono>
 #include <QDebug>
