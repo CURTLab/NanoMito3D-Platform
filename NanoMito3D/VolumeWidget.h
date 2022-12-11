@@ -38,6 +38,7 @@ public:
 	VolumeWidget(QWidget *parent = nullptr);
 	~VolumeWidget();
 
+	void clear();
 	void setVolume(Volume volume, std::array<double,4> color, bool copyData = true);
 	void addSpheres(const std::vector<std::array<float,3>> &points, float r, std::array<double,3> color);
 	void addGraph(std::shared_ptr<SkeletonGraph> graph, const Volume &volume, float r, std::array<double,3> color);

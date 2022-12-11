@@ -6,55 +6,361 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>886</width>
+    <height>660</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout">
+   <layout class="QVBoxLayout" name="verticalLayout_2">
     <item>
-     <widget class="QGroupBox" name="groupBox">
-      <property name="maximumSize">
-       <size>
-        <width>250</width>
-        <height>16777215</height>
-       </size>
+     <widget class="QSplitter" name="splitter">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
       </property>
-      <property name="title">
-       <string>Settings</string>
-      </property>
-      <layout class="QVBoxLayout" name="verticalLayout">
-       <item>
-        <widget class="QCheckBox" name="checkUseGPU">
-         <property name="text">
-          <string>Use GPU</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>465</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-      </layout>
+      <widget class="QFrame" name="frame">
+       <property name="frameShape">
+        <enum>QFrame::NoFrame</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Raised</enum>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <widget class="QGroupBox" name="groupBox_2">
+          <property name="title">
+           <string>Localizations</string>
+          </property>
+          <layout class="QFormLayout" name="formLayout">
+           <item row="0" column="0">
+            <widget class="QLabel" name="label">
+             <property name="text">
+              <string>File:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <layout class="QHBoxLayout" name="horizontalLayout_2">
+             <item>
+              <widget class="QLineEdit" name="editFile"/>
+             </item>
+             <item>
+              <widget class="QToolButton" name="buttonSelectFile">
+               <property name="text">
+                <string>...</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_5">
+             <property name="text">
+              <string>Channel:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QComboBox" name="comboChannel">
+             <item>
+              <property name="text">
+               <string>All Channels</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="2" column="0" colspan="2">
+            <widget class="QCheckBox" name="checkUseGPU">
+             <property name="text">
+              <string>Use GPU</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="groupDensityFilter">
+          <property name="title">
+           <string>Density Filter</string>
+          </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
+          <layout class="QGridLayout" name="gridLayout">
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_9">
+             <property name="text">
+              <string>Radius:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QDoubleSpinBox" name="spinRadius">
+             <property name="suffix">
+              <string> nm</string>
+             </property>
+             <property name="decimals">
+              <number>0</number>
+             </property>
+             <property name="maximum">
+              <double>2500.000000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_10">
+             <property name="text">
+              <string>Min. points:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QSpinBox" name="spinMinPoints"/>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="groupBox">
+          <property name="title">
+           <string>Render Settings</string>
+          </property>
+          <layout class="QFormLayout" name="formLayout_2">
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_2">
+             <property name="text">
+              <string>Voxel size:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <layout class="QHBoxLayout" name="horizontalLayout_3">
+             <item>
+              <widget class="QDoubleSpinBox" name="spinVoxelSizeWidth">
+               <property name="suffix">
+                <string> nm</string>
+               </property>
+               <property name="decimals">
+                <number>0</number>
+               </property>
+               <property name="maximum">
+                <double>250.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_3">
+               <property name="text">
+                <string>x</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QDoubleSpinBox" name="spinVoxelSizeHeight">
+               <property name="suffix">
+                <string> nm</string>
+               </property>
+               <property name="decimals">
+                <number>0</number>
+               </property>
+               <property name="maximum">
+                <double>250.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_4">
+               <property name="text">
+                <string>x</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QDoubleSpinBox" name="spinVoxelSizeDepth">
+               <property name="suffix">
+                <string> nm</string>
+               </property>
+               <property name="decimals">
+                <number>0</number>
+               </property>
+               <property name="maximum">
+                <double>250.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_8">
+             <property name="text">
+              <string>Max PA:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <layout class="QHBoxLayout" name="horizontalLayout_4">
+             <item>
+              <widget class="QDoubleSpinBox" name="spinMaxPAX">
+               <property name="suffix">
+                <string> nm</string>
+               </property>
+               <property name="decimals">
+                <number>0</number>
+               </property>
+               <property name="maximum">
+                <double>250.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_6">
+               <property name="text">
+                <string>x</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QDoubleSpinBox" name="spinMaxPAY">
+               <property name="suffix">
+                <string> nm</string>
+               </property>
+               <property name="decimals">
+                <number>0</number>
+               </property>
+               <property name="maximum">
+                <double>250.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_7">
+               <property name="text">
+                <string>x</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QDoubleSpinBox" name="spinMaxPAZ">
+               <property name="suffix">
+                <string> nm</string>
+               </property>
+               <property name="decimals">
+                <number>0</number>
+               </property>
+               <property name="maximum">
+                <double>250.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_11">
+             <property name="text">
+              <string>Window size:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QSpinBox" name="spinWindowSize"/>
+           </item>
+           <item row="3" column="1">
+            <widget class="QPushButton" name="buttonRender">
+             <property name="text">
+              <string>Render</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="groupBox_3">
+          <property name="title">
+           <string>Mitochondria analyzis:</string>
+          </property>
+          <layout class="QFormLayout" name="formLayout_3">
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_12">
+             <property name="text">
+              <string>Gaussian sigma:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QDoubleSpinBox" name="spinGaussianSigma">
+             <property name="suffix">
+              <string> voxel</string>
+             </property>
+             <property name="decimals">
+              <number>1</number>
+             </property>
+             <property name="maximum">
+              <double>250.000000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_13">
+             <property name="text">
+              <string>Threshold method:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QComboBox" name="comboThreshold">
+             <item>
+              <property name="text">
+               <string>Local IsoData</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Local Otsu</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QPushButton" name="buttonAnalyse">
+             <property name="text">
+              <string>Analyze</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <spacer name="verticalSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>30</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+      <widget class="VolumeWidget" name="volumeView" native="true">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+      </widget>
      </widget>
-    </item>
-    <item>
-     <widget class="VolumeWidget" name="volumeView" native="true"/>
     </item>
    </layout>
   </widget>
@@ -63,7 +369,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
+     <width>886</width>
      <height>21</height>
     </rect>
    </property>

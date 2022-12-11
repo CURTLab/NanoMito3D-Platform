@@ -41,226 +41,139 @@
 #include <QDebug>
 
 #include <QMessageBox>
+#include <QFileDialog>
 
 MainWindow::MainWindow(QWidget *parent)
 	: QMainWindow(parent)
 	, m_ui(new Ui::MainWindow)
+	, m_bar(new QProgressBar)
 {
 	m_ui->setupUi(this);
 
 	GPU::initGPU();
 
+	m_ui->splitter->setSizes({250, width()-250});
+	m_ui->statusbar->addPermanentWidget(m_bar);
+	m_bar->setVisible(false);
+
+	// default settings
+	m_ui->spinVoxelSizeWidth->setValue(85);
+	m_ui->spinVoxelSizeHeight->setValue(85);
+	m_ui->spinVoxelSizeDepth->setValue(25);
+	m_ui->spinMaxPAX->setValue(100);
+	m_ui->spinMaxPAY->setValue(100);
+	m_ui->spinMaxPAZ->setValue(200);
+	m_ui->spinRadius->setValue(250);
+	m_ui->spinMinPoints->setValue(10);
+	m_ui->spinGaussianSigma->setValue(1.5);
+	m_ui->spinWindowSize->setValue(5);
+
+	m_ui->buttonRender->setEnabled(false);
+	m_ui->buttonAnalyse->setEnabled(false);
+
 	setWindowTitle(tr("NanoMito3D r%1").arg(GIT_REVISION));
+
+	connect(&m_analyis, &AnalyzeMitochondria::progressRangeChanged,
+			  m_bar, &QProgressBar::setRange);
+
+	connect(&m_analyis, &AnalyzeMitochondria::progressChanged,
+			  m_bar, &QProgressBar::setValue);
+
+	connect(m_ui->buttonSelectFile, &QAbstractButton::released,
+			  this, [this]() {
+		m_bar->setVisible(false);
+		QString fileName = QFileDialog::getOpenFileName(this, "Open localization file", DEV_PATH "/examples", "TSF File (*.tsf)");
+		if (!fileName.isEmpty()) {
+			m_ui->statusbar->showMessage(tr("Load %1").arg(QFileInfo(fileName).fileName()));
+			m_ui->frame->setEnabled(false);
+			m_analyis.load(fileName);
+		}
+	});
+
+	connect(&m_analyis, &AnalyzeMitochondria::error, this, [this](QString title, QString errorMessage){
+		m_ui->frame->setEnabled(true);
+		QMessageBox::critical(this, title, errorMessage);
+			  });
+
+	connect(&m_analyis, &AnalyzeMitochondria::localizationsLoaded, this, [this]() {
+		m_ui->buttonRender->setEnabled(true);
+		m_ui->buttonAnalyse->setEnabled(false);
+		m_ui->editFile->setText(m_analyis.fileName());
+		m_ui->statusbar->showMessage(tr("Loaded %1 localizations form %2 successfully!")
+											  .arg(m_analyis.localizations().size())
+											  .arg(QFileInfo(m_analyis.fileName()).fileName()));
+		if (m_analyis.availableChannels() > 1) {
+			m_ui->comboChannel->clear();
+			m_ui->comboChannel->addItem(tr("All channels"));
+			for (int i = 0; i < m_analyis.availableChannels(); ++i)
+				m_ui->comboChannel->addItem(tr("Channel %1").arg(i+1));
+			m_ui->comboChannel->setEnabled(true);
+		} else {
+			m_ui->comboChannel->setCurrentIndex(0);
+			m_ui->comboChannel->setEnabled(false);
+		}
+		m_ui->frame->setEnabled(true);
+	});
+
+	connect(m_ui->buttonRender, &QAbstractButton::released,
+			  this, [this]() {
+		m_ui->frame->setEnabled(false);
+		m_bar->setVisible(false);
+		m_ui->statusbar->showMessage(tr("Start rendering volume"));
+		m_analyis.render(voxelSize(), maxPA(), m_ui->spinWindowSize->value(), m_ui->comboChannel->currentIndex(),
+							  m_ui->groupDensityFilter->isChecked(), m_ui->spinMinPoints->value(), m_ui->spinRadius->value(),
+							  m_ui->checkUseGPU->isChecked());
+	});
+
+	connect(&m_analyis, &AnalyzeMitochondria::volumeRendered, this, [this]() {
+		m_ui->buttonRender->setEnabled(true);
+		m_ui->buttonAnalyse->setEnabled(true);
+		m_ui->statusbar->showMessage(tr("Rendered volume successfully!"));
+		m_ui->volumeView->setVolume(m_analyis.volume(), {0, 0, 1, 255});
+		m_ui->frame->setEnabled(true);
+	});
+
+	connect(m_ui->buttonAnalyse, &QAbstractButton::released,
+			  this, [this]() {
+		m_ui->frame->setEnabled(false);
+		m_bar->setVisible(true);
+		m_ui->statusbar->showMessage(tr("Analyzing volume ..."));
+		m_analyis.analyze(m_ui->spinGaussianSigma->value(), (ThresholdMethods)m_ui->comboThreshold->currentIndex(), m_ui->checkUseGPU->isChecked());
+	});
+
+	connect(&m_analyis, &AnalyzeMitochondria::volumeAnalyzed, this, [this]() {
+		m_ui->statusbar->showMessage(tr("Volume successfully analyzed!"));
+
+		const auto &segments = m_analyis.segments();
+		const float r = std::max({segments.volume.voxelSize()[0], segments.volume.voxelSize()[1], segments.volume.voxelSize()[2]});
+
+		m_ui->volumeView->clear();
+		m_ui->volumeView->setVolume(segments.volume, {0., 0., 1., 0.4});
+		std::vector<std::array<float,3>> endPoints;
+		for (const auto &s : segments) {
+			m_ui->volumeView->addGraph(s.graph, segments.volume, 0.5f * r, {0.f, 1.f, 0.f});
+			for (const auto &p : s.endPoints)
+				endPoints.push_back(p);
+		}
+		m_ui->volumeView->addSpheres(endPoints, 0.8f * r, {1.f,0.f,0.f});
+		m_ui->frame->setEnabled(true);
+	});
 }
 
 MainWindow::~MainWindow()
 {
 }
 
-void MainWindow::showEvent(QShowEvent *event)
+std::array<float, 3> MainWindow::voxelSize() const
 {
-	QMainWindow::showEvent(event);
-
-	try {
-#if 1
-		Localizations locs;
-		//locs.load(DEV_PATH "/examples/WOP_CD62p_AntiMito_C1000_dual_Cell4_dSTORM_red_blue_031_v3.tsf");
-		locs.load(DEV_PATH "/examples/WOP_CD62p_AntiMito_C1000_dual_dSTORM_red_blue_034_v3.tsf");
-		m_ui->statusbar->showMessage(tr("Loaded %1 localizations from file. %2 x %3 µm²").arg(locs.size()).arg(locs.width()*1E-3).arg(locs.height()*1E-3));
-		qDebug() << "Loaded" << locs.size() << "localizations from file";
-
-		const std::array<float,3> voxelSize{85.f, 85.f, 25.f}; // nm
-		m_volume = render(locs, voxelSize, {100.f, 100.f, 200.f}, 2);
-
-		analyse(m_volume, locs, 1.5);
-#else
-		m_volume = Volume::loadTif(DEV_PATH "/examples/bat-cochlea-volume.tif");
-		analyse(m_volume, 1.5f);
-#endif
-	} catch(std::exception &e) {
-		qCritical().nospace() << tr("Error: ") + e.what();
-		QMessageBox::critical(this, "Error", e.what());
-	}
-
-	//analyse(m_volume);
+	return {static_cast<float>(m_ui->spinVoxelSizeWidth->value()),
+			  static_cast<float>(m_ui->spinVoxelSizeHeight->value()),
+			  static_cast<float>(m_ui->spinVoxelSizeDepth->value())};
 }
 
-Volume MainWindow::render(Localizations &locs, std::array<float, 3> voxelSize, std::array<float, 3> maxPA, int channel)
+std::array<float, 3> MainWindow::maxPA() const
 {
-	Volume ret;
-	try {
-#if 1
-		// filter localizations by channel and PA
-		auto start = std::chrono::steady_clock::now();
-
-		locs.erase(std::remove_if(locs.begin(), locs.end(), [&maxPA,channel](const Localization &l) {
-			if (channel > 0 && l.channel != channel)
-				return true;
-			return (l.PAx > maxPA[0] || l.PAy > maxPA[1] || l.PAz > maxPA[2]);
-		}), locs.end());
-
-		auto dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
-		qDebug().nospace() << "Filtered: " << locs.size() << " in " << dur.count() << " s";
-#endif
-
-#if 0
-		// filter by density CPU
-		start = std::chrono::steady_clock::now();
-
-		locs.erase(DensityFilter::remove_cpu(locs, 10, 250.f), locs.end());
-
-		end = std::chrono::steady_clock::now();
-		dur = std::chrono::duration<double>(end - start);
-
-		qDebug().nospace() << "Density filter (CPU): " << locs.size()  << " in " << dur.count() << " s";
-#else
-		// filter by density GPU
-		start = std::chrono::steady_clock::now();
-
-		if (m_ui->checkUseGPU->isChecked())
-			locs.erase(DensityFilter::remove_gpu(locs, 10, 250.f), locs.end());
-		else
-			locs.erase(DensityFilter::remove_cpu(locs, 10, 250.f), locs.end());
-
-		dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
-
-		qDebug().nospace() << "Density filter (GPU): " << locs.size()  << " in " << dur.count() << " s";
-#endif
-
-		// 3D rendering
-		start = std::chrono::steady_clock::now();
-
-		if (m_ui->checkUseGPU->isChecked())
-			ret = Rendering::render_gpu(locs, voxelSize, 5);
-		else
-			ret = Rendering::render_cpu(locs, voxelSize, 5);
-
-		dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
-
-		qDebug().nospace() << "Rendering (GPU): " << dur.count() << " s";
-	} catch(std::exception &e) {
-		QMessageBox::critical(this, "Rendering error", e.what());
-		qCritical().nospace() << tr("Rendering Error: ") + e.what();
-	}
-
-	return ret;
-}
-
-void MainWindow::analyse(Volume &volume, Localizations &locs, float sigma)
-{
-	try {
-		Volume filteredVolume(volume.size(), volume.voxelSize(), volume.origin());
-
-		// gaussian filter 3D
-		auto start = std::chrono::steady_clock::now();
-
-		const int windowSize = (int)(sigma * 4) | 1;
-		// default 7
-		GaussianFilter::gaussianFilter_gpu(volume.constData(), filteredVolume.data(), volume.width(), volume.height(), volume.depth(), windowSize, sigma);
-
-		auto dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
-
-		qDebug().nospace() << "Gaussian filter (GPU): " << dur.count() << " s";
-
-		// local thresholding 3D
-		start = std::chrono::steady_clock::now();
-
-		LocalThreshold::localThrehsold_gpu(LocalThreshold::IsoData, filteredVolume, filteredVolume, 11);
-
-		dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
-
-		qDebug().nospace() << "Local threshold filter (GPU): " << dur.count() << " s";
-
-		// skeleton 3D
-		start = std::chrono::steady_clock::now();
-
-		Skeleton3D::skeletonize(filteredVolume, m_skeleton);
-
-		dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
-
-		qDebug().nospace() << "Skeltonize (CPU): " << dur.count() << " s";
-
-		// analyse skeleton 3D
-		start = std::chrono::steady_clock::now();
-
-		Skeleton3D::Analysis analysis;
-		auto trees = analysis.calculate(m_skeleton, {}, Skeleton3D::Analysis::NoPruning, true, 0.0, true);
-
-		dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
-
-		qDebug().nospace() << "Analyse skeleton (CPU): " << dur.count() << " s";
-
-		Octree<uint32_t,float,50> tree(locs.bounds());
-		for (uint32_t i = 0; i < locs.size(); ++i)
-			tree.insert(locs[i].position(), i);
-
-		// filter skeleton 3D
-		start = std::chrono::steady_clock::now();
-		Volume segmentedVolume(volume.size(), volume.voxelSize(), volume.origin());
-		segmentedVolume.fill(0);
-
-		const float r = std::max({volume.voxelSize()[0], volume.voxelSize()[1], volume.voxelSize()[2]});
-		std::vector<std::array<float,3>> endPoints;
-		std::vector<std::shared_ptr<SkeletonGraph>> graphs;
-
-		Segments segments;
-		Segment s;
-		for (int i = 0; i < trees.size(); ++i) {
-			const auto &t = trees[i];
-			auto [segment,voxels,box] = trees.extractVolume(filteredVolume, 1, i);
-
-			if ((box.width() <= 1) || (box.height() <= 1) || (box.depth() <= 1) || (voxels < 50)) {
-				continue;
-			}
-
-			// draw segment to new volume and count SMLM signals
-			uint32_t signalCount = 0;
-			for (int z = box.minZ; z <= box.maxZ; ++z) {
-				for (int y = box.minY; y <= box.maxY; ++y) {
-					for (int x = box.minX; x <= box.maxX; ++x) {
-						if (segment(x, y, z)) {
-							segmentedVolume(x, y, z) = 255;
-							signalCount += static_cast<uint32_t>(tree.countInBox(volume.mapVoxel(x, y, z), volume.voxelSize()));
-						}
-					}
-				}
-			}
-
-			// fill segment
-			s.numBranches = t.numberOfBranches;
-			s.numEndPoints = t.numberOfEndPoints;
-			s.numJunctionVoxels = t.numberOfJunctionVoxels;
-			s.numJunctions = t.numberOfJunctions;
-			s.numSlabs = t.numberOfSlabs;
-			s.numTriples = t.numberOfTriplePoints;
-			s.numQuadruples = t.numberOfQuadruplePoints;
-			s.averageBranchLength = t.averageBranchLength;
-			s.maximumBranchLength = t.maximumBranchLength;
-			s.shortestPath = t.shortestPath;
-			s.voxels = voxels;
-			// add 1 since bounding box calculates (max-min)
-			s.width = box.width() + 1;
-			s.height = box.height() + 1;
-			s.depth = box.depth() + 1;
-			s.signalCount = signalCount;
-
-			segments.push_back(s);
-
-			for (const auto &p : t.endPoints)
-				endPoints.push_back(m_skeleton.mapVoxel(p.x, p.y, p.z, true));
-			graphs.push_back(t.graph);
-		}
-		segments.volume = segmentedVolume;
-
-		qDebug().nospace() << "Filter skeleton (CPU): " << dur.count() << " s";
-
-		m_ui->volumeView->setVolume(segmentedVolume, {0., 0., 1., 0.4});
-		for (const auto &g : graphs)
-			m_ui->volumeView->addGraph(g, segmentedVolume, 0.5f * r, {0.f, 1.f, 0.f});
-		m_ui->volumeView->addSpheres(endPoints, 0.8f * r, {1.f,0.f,0.f});
-
-	} catch(std::exception &e) {
-		QMessageBox::critical(this, "Analyse error", e.what());
-		qCritical().nospace() << tr("Analyse error: ") + e.what();
-	}
+	return {static_cast<float>(m_ui->spinMaxPAX->value()),
+			  static_cast<float>(m_ui->spinMaxPAY->value()),
+			  static_cast<float>(m_ui->spinMaxPAZ->value())};
 }

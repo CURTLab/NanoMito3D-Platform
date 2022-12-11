@@ -24,9 +24,10 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QProgressBar>
+
 #include <memory>
-#include "Volume.h"
-#include "Localizations.h"
+
 #include "AnalyzeMitochondria.h"
 
 QT_BEGIN_NAMESPACE
@@ -41,18 +42,15 @@ public:
 	MainWindow(QWidget *parent = nullptr);
 	~MainWindow();
 
-protected:
-	virtual void showEvent(QShowEvent *event);
+private slots:
 
 private:
-	AnalyzeMitochondria m_analyis;
-
-	Volume render(Localizations &locs, std::array<float,3> voxelSize, std::array<float,3> maxPA, int channel);
-	void analyse(Volume &volume, Localizations &locs, float sigma);
+	std::array<float,3> voxelSize() const;
+	std::array<float,3> maxPA() const;
 
 	std::unique_ptr<Ui::MainWindow> m_ui;
-	Volume m_volume;
-	Volume m_skeleton;
+	QProgressBar *m_bar;
+	AnalyzeMitochondria m_analyis;
 
 };
 

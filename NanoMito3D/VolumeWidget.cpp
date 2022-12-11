@@ -95,6 +95,14 @@ VolumeWidget::~VolumeWidget()
 	delete m_d;
 }
 
+void VolumeWidget::clear()
+{
+	Q_D(VolumeWidget);
+	d->renderer->RemoveAllViewProps();
+	d->renderer->ResetCamera();
+	d->renderWindow()->Render();
+}
+
 void VolumeWidget::setVolume(Volume volume, std::array<double, 4> color, bool copyData)
 {
 	Q_D(VolumeWidget);
