@@ -58,6 +58,8 @@ public:
 		return {0.f, m_width * m_pixelSize,  0.f, m_height * m_pixelSize, m_minZ, m_maxZ };
 	}
 
+	inline constexpr int channels() const { return m_channels; };
+
 	bool copyTo(DeviceType device);
 	const Localization *constData(DeviceType device) const;
 
@@ -69,6 +71,7 @@ private:
 	float m_pixelSize;
 	float m_minZ;
 	float m_maxZ;
+	int m_channels;
 	Localization *m_dData;
 	size_t m_dSize;
 

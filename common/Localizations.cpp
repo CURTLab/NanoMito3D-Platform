@@ -32,7 +32,7 @@
 #include <cuda_runtime.h>
 
 Localizations::Localizations()
-	: m_width(0), m_height(0), m_pixelSize(1.f), m_dData(nullptr), m_dSize(0)
+	: m_width(0), m_height(0), m_pixelSize(1.f), m_minZ(0.f), m_maxZ(0.f), m_channels(1), m_dData(nullptr), m_dSize(0)
 {
 	static_assert(sizeof(Localization) == 32);
 }
@@ -90,6 +90,7 @@ void Localizations::load(const std::string &fileName)
 	m_pixelSize = spotList.has_pixel_size() ? spotList.pixel_size() : 1.f;
 	m_width = spotList.has_nr_pixels_x() ? spotList.nr_pixels_x() : 0;
 	m_height = spotList.has_nr_pixels_y() ? spotList.nr_pixels_y() : 0;
+	m_channels = spotList.has_nr_channels() ? spotList.nr_channels() : 1;
 
 	m_minZ = std::numeric_limits<float>::max();
 	m_maxZ = -std::numeric_limits<float>::max();

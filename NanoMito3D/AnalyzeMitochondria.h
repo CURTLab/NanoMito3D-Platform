@@ -25,13 +25,52 @@
 
 #include <QObject>
 
+#include "Volume.h"
+#include "Localizations.h"
+#include "Segments.h"
+
+enum class ThresholdMethods {
+	LocalISOData,
+	LocalOtsu
+};
+
 class AnalyzeMitochondria : public QObject
 {
 	Q_OBJECT
 public:
 	explicit AnalyzeMitochondria(QObject *parent = nullptr);
 
+	// load localization file synchron or asynchron (threaded)
+	void load(const QString &fileName, bool threaded = true);
+
+	int availableChannels() const;
+
+	// render the loaded localizations
+	void render(std::array<float,3> voxelSize, std::array<float,3> maxPA, int windowSize, int channel, bool densityFilter, int minPts, float radius, bool useGPU, bool threaded = true);
+
+	// analyze the volume rendered
+	void analyze(float sigma, ThresholdMethods thresholdMethod, bool useGPU, bool threaded = true);
+
+	inline constexpr const QString &fileName() const { return m_fileName; }
+	inline constexpr const Localizations &localizations() const { return m_locs; }
+	inline constexpr const Volume &volume() const { return m_volume; }
+	inline constexpr const Segments &segments() const { return m_segments; }
+
 signals:
+	void localizationsLoaded();
+	void volumeRendered();
+	void volumeAnalyzed();
+
+	void error(QString title, QString errorMessage);
+	void progressRangeChanged(int min, int max);
+	void progressChanged(int value);
+
+private:
+	QString m_fileName;
+	Localizations m_locs;
+	Volume m_volume;
+	Volume m_skeleton;
+	Segments m_segments;
 
 };
 

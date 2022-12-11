@@ -26,8 +26,9 @@
 #include <string>
 
 #include "Volume.h"
+#include "SkeletonGraph.h"
 
-struct Segment
+struct SegmentData
 {
 	float numBranches;
 	float numEndPoints;
@@ -44,6 +45,12 @@ struct Segment
 	float height;
 	float depth;
 	float signalCount;
+};
+
+struct Segment {
+	std::shared_ptr<SkeletonGraph> graph;
+	std::vector<std::array<float,3>> endPoints;
+	SegmentData data;
 };
 
 class Segments : public std::vector<Segment>
