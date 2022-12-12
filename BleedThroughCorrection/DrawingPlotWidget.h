@@ -1,0 +1,54 @@
+/****************************************************************************
+ *
+ * Copyright (C) 2022 Fabian Hauser
+ *
+ * Author: Fabian Hauser <fabian.hauser@fh-linz.at>
+ * University of Applied Sciences Upper Austria - Linz - Austra
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ ****************************************************************************/
+
+#ifndef DRAWINGPLOTWIDGET_H
+#define DRAWINGPLOTWIDGET_H
+
+#include <QWidget>
+
+#include <opencv2/opencv.hpp>
+
+class DrawingPlotWidgetPrivate;
+
+class DrawingPlotWidget : public QWidget
+{
+	Q_OBJECT
+public:
+	explicit DrawingPlotWidget(QWidget *parent = nullptr);
+	~DrawingPlotWidget();
+
+	QImage paintOverlay() const;
+	void setPaintOverlay(QImage image) const;
+	void clearOverlay();
+
+public slots:
+	void setImage(const cv::Mat &image);
+
+	void setPaintToolWidth(int width);
+	void setPaintToolColor(QColor color);
+
+private:
+	DrawingPlotWidgetPrivate * const m_d;
+
+};
+
+#endif // DRAWINGPLOTWIDGET_H

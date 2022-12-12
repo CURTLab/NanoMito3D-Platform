@@ -4,3 +4,4 @@ common/proto/TSFProto.pb.*
 *.tsf
 *.tif
 common/Version.h
+build-*
