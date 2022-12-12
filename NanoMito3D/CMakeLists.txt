@@ -19,10 +19,10 @@ find_package(VTK 8.0 REQUIRED COMPONENTS GUISupportQt RenderingVolumeOpenGL2 Com
 find_package(OpenCV REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(CUDA 7.0 REQUIRED)
-find_package(Qwt REQUIRED)
 
 add_subdirectory(3dparty/cuNSearch)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../common ${CMAKE_CURRENT_BINARY_DIR}/common)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../widgets ${CMAKE_CURRENT_BINARY_DIR}/widgets)
 
 set(PROJECT_SOURCES
     kernels/DensityFilterGPU.cu
@@ -47,10 +47,9 @@ set(PROJECT_SOURCES
     SkeletonGraph.h SkeletonGraph.cpp
     Segments.h Segments.cpp
     AnalyzeMitochondria.h AnalyzeMitochondria.cpp
-    MatPlotWidget.h MatPlotWidget.cpp
 )
 
-include_directories(${CUDA_INCLUDE_DIRS} "../common")
+include_directories(${CUDA_INCLUDE_DIRS} "../common" "../widgets")
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(${CMAKE_PROJECT_NAME}
@@ -69,8 +68,8 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
         ${VTK_LIBRARIES}
         ${OpenCV_LIBS}
         cuNSearch
-        Qwt::Qwt
         Common
+        Widgets
 )
 
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES CUDA_ARCHITECTURES "50")
@@ -81,7 +80,7 @@ vtk_module_autoinit(
   MODULES ${VTK_LIBRARIES}
 )
 
-target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE "DEV_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/..\"" -DQWT_DLL)
+target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE "DEV_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/..\"")
 
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
