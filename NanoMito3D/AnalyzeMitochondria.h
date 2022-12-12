@@ -66,6 +66,7 @@ public:
 	inline constexpr const Segments &segments() const { return m_segments; }
 	inline constexpr const Volume &classifiedVolume() const { return m_classifiedVolume; }
 	inline constexpr const int numClasses() const { return m_numClasses; }
+	inline constexpr const QVector<double> &classificationResult() const { return m_classificationResult; }
 
 signals:
 	void localizationsLoaded();
@@ -87,6 +88,7 @@ private:
 	Skeleton3D::GenericVolume<int> m_labeledVolume;
 	Volume m_classifiedVolume;
 	int m_numClasses;
+	QVector<double> m_classificationResult;
 
 };
 

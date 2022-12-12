@@ -299,8 +299,9 @@ void AnalyzeMitochondria::classify(bool threaded)
 				emit progressChanged(static_cast<int>(i));
 			}
 
+			m_classificationResult.resize(m_numClasses-1);
 			for (int i = 1; i < m_numClasses; ++i)
-				qDebug().nospace() << "Class " << i << ": " << (double)hist[i] / numVoxels;
+				m_classificationResult[i-1] = (double)hist[i] / numVoxels;
 
 			emit volumeClassified();
 		} catch(std::exception &e) {

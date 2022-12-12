@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>892</width>
-    <height>710</height>
+    <width>978</width>
+    <height>748</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -334,16 +334,7 @@
              </property>
             </widget>
            </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
-         <widget class="QGroupBox" name="groupBox_4">
-          <property name="title">
-           <string>Classification</string>
-          </property>
-          <layout class="QFormLayout" name="formLayout_4">
-           <item row="0" column="1">
+           <item row="3" column="1">
             <widget class="QPushButton" name="buttonClassify">
              <property name="text">
               <string>Classify</string>
@@ -352,6 +343,9 @@
            </item>
           </layout>
          </widget>
+        </item>
+        <item>
+         <widget class="MatPlotWidget" name="plot" native="true"/>
         </item>
         <item>
          <spacer name="verticalSpacer">
@@ -385,7 +379,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>892</width>
+     <width>978</width>
      <height>21</height>
     </rect>
    </property>
@@ -397,6 +391,12 @@
    <class>VolumeWidget</class>
    <extends>QWidget</extends>
    <header>VolumeWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>MatPlotWidget</class>
+   <extends>QWidget</extends>
+   <header>MatPlotWidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

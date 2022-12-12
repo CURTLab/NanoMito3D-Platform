@@ -53,6 +53,7 @@ MainWindow::MainWindow(QWidget *parent)
 	GPU::initGPU();
 
 	m_ui->splitter->setSizes({250, width()-250});
+	m_ui->plot->setTitle("Classification of voxels");
 	m_ui->statusbar->addPermanentWidget(m_bar);
 	m_bar->setVisible(false);
 
@@ -157,7 +158,7 @@ MainWindow::MainWindow(QWidget *parent)
 		m_ui->volumeView->setVolume(segments.volume, {0., 0., 1., 0.4});
 		std::vector<std::array<float,3>> endPoints;
 		for (const auto &s : segments) {
-			m_ui->volumeView->addGraph(s.graph, segments.volume, 0.5f * r, {0.f, 1.f, 0.f});
+			//m_ui->volumeView->addGraph(s.graph, segments.volume, 0.5f * r, {0.f, 1.f, 0.f});
 			for (const auto &p : s.endPoints)
 				endPoints.push_back(p);
 		}
@@ -176,6 +177,21 @@ MainWindow::MainWindow(QWidget *parent)
 		m_ui->statusbar->showMessage(tr("Volume successfully classified!"));
 		m_ui->volumeView->clear();
 		m_ui->volumeView->addClassifiedVolume(m_analyis.classifiedVolume(), m_analyis.numClasses());
+
+		auto bars = m_analyis.classificationResult();
+		if (bars.size() == 3) {
+			m_ui->plot->clear();
+			m_ui->plot->addBars({"Puncture", "Rod", "Network"}, bars, {QColor(0,255,0),QColor(64, 224, 208),QColor(0,0,255)});
+			double max = 0;
+			for (int i = 0; i < bars.size(); ++i) {
+				max = std::max(max, bars[i]);
+				m_ui->plot->addText({(double)i, bars[i]}, QString("%1%").arg(bars[i]*100.0, 0, 'f', 2), Qt::black, Qt::AlignHCenter|Qt::AlignTop);
+			}
+			m_ui->plot->setYScale(0, max + 0.1);
+		} else {
+			QMessageBox::critical(this, "Error", "Expected three classes as result!");
+		}
+
 		m_ui->frame->setEnabled(true);
 	});
 }
