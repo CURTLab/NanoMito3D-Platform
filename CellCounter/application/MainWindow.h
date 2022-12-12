@@ -19,37 +19,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ****************************************************************************/
+#ifndef MAINWINDOW_H
+#define MAINWINDOW_H
 
-#ifndef HISTOGRAMWIDGET_H
-#define HISTOGRAMWIDGET_H
+#include <QMainWindow>
 
-#include <QWidget>
+#include <opencv2/opencv.hpp>
 
-class MatPlotWidgetPrivate;
+#include <memory>
 
-class MatPlotWidget : public QWidget
+QT_BEGIN_NAMESPACE
+namespace Ui { class MainWindow; }
+QT_END_NAMESPACE
+
+class MainWindow : public QMainWindow
 {
-	Q_DECLARE_PRIVATE_D(m_d, MatPlotWidget)
+	Q_OBJECT
+
 public:
-	MatPlotWidget(QWidget *parent = nullptr);
-
-	void addBars(const QStringList &values, const QVector<double> &height, const QVector<QColor> &colors, double width = 0.8);
-	void addText(const QPointF &postion, const QString &text, QColor color = Qt::black, Qt::Alignment alignment = Qt::AlignCenter);
-
-	void replot();
-	void clear();
-
-	void setTitle(const QString &title);
-	void setXLabel(const QString &label);
-	void setYLabel(const QString &label);
-
-	void setXScale(double min, double max);
-	void setYScale(double min, double max);
-	void setLimits(double lowerx, double upperx, double lowery, double uppery);
+	MainWindow(QWidget *parent = nullptr);
+	~MainWindow();
 
 private:
-	std::unique_ptr<MatPlotWidgetPrivate> const m_d;
+	void import(const QString &fileName);
+
+	std::unique_ptr<Ui::MainWindow> m_ui;
+	cv::Mat m_image;
+	cv::Mat m_result;
+	QString m_fileName;
 
 };
-
-#endif // HISTOGRAMWIDGET_H
+#endif // MAINWINDOW_H

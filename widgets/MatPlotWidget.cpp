@@ -226,11 +226,6 @@ MatPlotWidget::MatPlotWidget(QWidget *parent)
 	layout->addWidget(d->plot);
 }
 
-MatPlotWidget::~MatPlotWidget()
-{
-	delete m_d;
-}
-
 void MatPlotWidget::addBars(const QStringList &values, const QVector<double> &height, const QVector<QColor> &colors, double width)
 {
 	Q_D(MatPlotWidget);

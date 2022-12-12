@@ -20,36 +20,14 @@
  *
  ****************************************************************************/
 
-#ifndef HISTOGRAMWIDGET_H
-#define HISTOGRAMWIDGET_H
+#include "MainWindow.h"
 
-#include <QWidget>
+#include <QApplication>
 
-class MatPlotWidgetPrivate;
-
-class MatPlotWidget : public QWidget
+int main(int argc, char *argv[])
 {
-	Q_DECLARE_PRIVATE_D(m_d, MatPlotWidget)
-public:
-	MatPlotWidget(QWidget *parent = nullptr);
-
-	void addBars(const QStringList &values, const QVector<double> &height, const QVector<QColor> &colors, double width = 0.8);
-	void addText(const QPointF &postion, const QString &text, QColor color = Qt::black, Qt::Alignment alignment = Qt::AlignCenter);
-
-	void replot();
-	void clear();
-
-	void setTitle(const QString &title);
-	void setXLabel(const QString &label);
-	void setYLabel(const QString &label);
-
-	void setXScale(double min, double max);
-	void setYScale(double min, double max);
-	void setLimits(double lowerx, double upperx, double lowery, double uppery);
-
-private:
-	std::unique_ptr<MatPlotWidgetPrivate> const m_d;
-
-};
-
-#endif // HISTOGRAMWIDGET_H
+	QApplication a(argc, argv);
+	MainWindow w;
+	w.show();
+	return a.exec();
+}

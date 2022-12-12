@@ -30,10 +30,12 @@ class ImagePlotWidgetPrivate;
 
 class ImagePlotWidget : public QWidget
 {
+	Q_DECLARE_PRIVATE_D(m_d, ImagePlotWidget)
 public:
 	ImagePlotWidget(QWidget *parent = nullptr);
 
 	void setImage(const cv::Mat &image);
+	void clear();
 
 private:
 	std::unique_ptr<ImagePlotWidgetPrivate> const m_d;

@@ -33,6 +33,7 @@
 #include <qwt_plot_spectrogram.h>
 #include <qwt_plot_rescaler.h>
 #include <qwt_color_map.h>
+#include <qwt_plot_canvas.h>
 
 class RasterData : public QwtRasterData
 {
@@ -44,7 +45,7 @@ public:
 	virtual inline double value(double x, double y) const override {
 		if (m_image.empty())
 			return 0.0;
-		const double d = m_image.at<double>(static_cast<int>(std::floor(x)), static_cast<int>(std::floor(y)));
+		const double d = m_image.at<double>(static_cast<int>(std::floor(y)), static_cast<int>(std::floor(x)));
 		return d;
 	}
 
@@ -52,8 +53,8 @@ public:
 
 	inline void setData(cv::Mat image, QwtInterval interval) {
 		image.convertTo(m_image, CV_64F);
-		setInterval(Qt::XAxis, QwtInterval(0, image.rows-1E-9));
-		setInterval(Qt::YAxis, QwtInterval(0, image.cols-1E-9));
+		setInterval(Qt::XAxis, QwtInterval(0, image.cols-1E-9));
+		setInterval(Qt::YAxis, QwtInterval(0, image.rows-1E-9));
 		setInterval(Qt::ZAxis, interval);
 	}
 
@@ -225,9 +226,13 @@ public:
 		plotLayout()->setSpacing(0);
 
 		axisWidget(QwtPlot::yLeft)->setMargin(1);
-		axisWidget(QwtPlot::yRight)->setMargin(1);
-		axisWidget(QwtPlot::xTop)->setMargin(1);
-		axisWidget(QwtPlot::xBottom)->setMargin(1);
+		axisWidget(QwtPlot::xBottom)->setMargin(2);
+		axisWidget(QwtPlot::yRight)->setMargin(0);
+		axisWidget(QwtPlot::xTop)->setMargin(0);
+
+		auto c = qobject_cast<QwtPlotCanvas*>(canvas());
+		c->setFrameStyle(QFrame::Plain);
+		c->setStyleSheet("background: #ccc;");
 	}
 
 };
@@ -244,6 +249,7 @@ ImagePlotWidget::ImagePlotWidget(QWidget *parent)
 
 void ImagePlotWidget::setImage(const cv::Mat &image)
 {
+	Q_D(ImagePlotWidget);
 	if (image.empty())
 		return;
 
@@ -254,24 +260,34 @@ void ImagePlotWidget::setImage(const cv::Mat &image)
 
 	qDebug() << image.rows << image.cols << minVal << maxVal;
 
-	m_d->data = new RasterData(image, intensity);
-	m_d->spectrogram->setData(m_d->data);
+	d->data = new RasterData(image, intensity);
+	d->spectrogram->setData(m_d->data);
 
 	// Only leave a small border to the image.
 	// If image size is selected as inverval program will crash!
-	QwtInterval xInt(0, image.rows-1E-9);
-	QwtInterval yInt(0, image.cols-1E-9);
+	QwtInterval xInt(0, image.cols-1E-9);
+	QwtInterval yInt(0, image.rows-1E-9);
 
-	m_d->setAxisScale(QwtPlot::xBottom, xInt.minValue(), xInt.maxValue());
+	d->setAxisScale(QwtPlot::xBottom, xInt.minValue(), xInt.maxValue());
 	// in order to invert the y axis
-	m_d->setAxisScale(QwtPlot::yLeft, yInt.maxValue(), yInt.minValue());
-	m_d->setAxisScaleDiv(QwtPlot::yLeft, QwtScaleDiv(yInt.maxValue(), yInt.minValue()));
+	d->setAxisScale(QwtPlot::yLeft, yInt.maxValue(), yInt.minValue());
+	d->setAxisScaleDiv(QwtPlot::yLeft, QwtScaleDiv(yInt.maxValue(), yInt.minValue()));
 
-	m_d->rescaler->setIntervalHint(QwtPlot::xBottom, xInt);
-	m_d->rescaler->setIntervalHint(QwtPlot::yLeft, yInt);
-	m_d->rescaler->setIntervalHint(QwtPlot::yRight, intensity);
-	m_d->rescaler->rescale();
+	d->rescaler->setIntervalHint(QwtPlot::xBottom, xInt);
+	d->rescaler->setIntervalHint(QwtPlot::yLeft, yInt);
+	d->rescaler->setIntervalHint(QwtPlot::yRight, intensity);
+	d->rescaler->rescale();
 
-	m_d->spectrogram->invalidateCache();
-	m_d->replot();
+	d->spectrogram->invalidateCache();
+	d->replot();
+}
+
+void ImagePlotWidget::clear()
+{
+	Q_D(ImagePlotWidget);
+	d->spectrogram->setData(nullptr);
+	d->data = nullptr;
+	d->detachItems(QwtPlotItem::Rtti_PlotCurve);
+	d->detachItems(QwtPlotItem::Rtti_PlotMarker);
+	d->replot();
 }
