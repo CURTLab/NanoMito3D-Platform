@@ -25,9 +25,12 @@
 
 #include <QObject>
 
+#include <opencv2/ml.hpp>
+
 #include "Volume.h"
 #include "Localizations.h"
 #include "Segments.h"
+#include "AnalyzeSkeleton.h"
 
 enum class ThresholdMethods {
 	LocalISOData,
@@ -51,15 +54,24 @@ public:
 	// analyze the volume rendered
 	void analyze(float sigma, ThresholdMethods thresholdMethod, bool useGPU, bool threaded = true);
 
+	// classify the analyzed volume
+	void classify(bool threaded = true);
+
+	// load model eighter from csv training dataset or pretrained json model file
+	void loadModel(const QString &fileName);
+
 	inline constexpr const QString &fileName() const { return m_fileName; }
 	inline constexpr const Localizations &localizations() const { return m_locs; }
 	inline constexpr const Volume &volume() const { return m_volume; }
 	inline constexpr const Segments &segments() const { return m_segments; }
+	inline constexpr const Volume &classifiedVolume() const { return m_classifiedVolume; }
+	inline constexpr const int numClasses() const { return m_numClasses; }
 
 signals:
 	void localizationsLoaded();
 	void volumeRendered();
 	void volumeAnalyzed();
+	void volumeClassified();
 
 	void error(QString title, QString errorMessage);
 	void progressRangeChanged(int min, int max);
@@ -71,6 +83,10 @@ private:
 	Volume m_volume;
 	Volume m_skeleton;
 	Segments m_segments;
+	cv::Ptr<cv::ml::RTrees> m_dtree;
+	Skeleton3D::GenericVolume<int> m_labeledVolume;
+	Volume m_classifiedVolume;
+	int m_numClasses;
 
 };
 

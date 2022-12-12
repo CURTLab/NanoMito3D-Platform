@@ -24,9 +24,11 @@
 
 #include <vector>
 #include <string>
+#include <opencv2/opencv.hpp>
 
 #include "Volume.h"
 #include "SkeletonGraph.h"
+#include "Bounds.h"
 
 struct SegmentData
 {
@@ -47,10 +49,14 @@ struct SegmentData
 	float signalCount;
 };
 
-struct Segment {
+struct Segment
+{
 	std::shared_ptr<SkeletonGraph> graph;
 	std::vector<std::array<float,3>> endPoints;
 	SegmentData data;
+	Bounds<int> boundingBox;
+	int prediction = 0;
+	int id = -1;
 };
 
 class Segments : public std::vector<Segment>

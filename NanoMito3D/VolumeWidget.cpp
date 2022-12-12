@@ -55,11 +55,78 @@
 #include <vtkCubeAxesActor.h>
 #include <vtkTextProperty.h>
 
+#include <vtkDiscreteMarchingCubes.h>
+#include <vtkLookupTable.h>
+
 class VolumeWidgetPrivate : public QVTKOpenGLNativeWidget
 {
 public:
 	inline VolumeWidgetPrivate(QWidget *parent) : QVTKOpenGLNativeWidget(parent) {}
 
+	inline vtkSmartPointer<vtkStructuredPoints> fromVolume(Volume volume, bool copyData) const
+	{
+		const size_t numPts = volume.voxels();
+
+		vtkNew<vtkUnsignedCharArray> scalars;
+		if (copyData)
+			std::copy_n(volume.data(), numPts, scalars->WritePointer(0, numPts));
+		else
+			scalars->SetArray(volume.data(), numPts, 1);
+
+		auto imageData = vtkSmartPointer<vtkStructuredPoints>::New();
+		imageData->GetPointData()->SetScalars(scalars);
+		imageData->SetDimensions(volume.width(), volume.height(), volume.depth());
+		imageData->SetOrigin(volume.origin()[0] * 1E-3, volume.origin()[1] * 1E-3, volume.origin()[2] * 1E-3);
+		imageData->SetSpacing(volume.voxelSize()[0] * 1E-3, volume.voxelSize()[1] * 1E-3, volume.voxelSize()[2] * 1E-3);
+
+		return imageData;
+	}
+
+	inline void addCubeActor(vtkSmartPointer<vtkStructuredPoints> imageData)
+	{
+		vtkNew<vtkCubeAxesActor> cubeAxesActor;
+
+		cubeAxesActor->SetXLabelFormat("%-#3.1f");
+		cubeAxesActor->SetYLabelFormat("%-#3.1f");
+		cubeAxesActor->SetZLabelFormat("%-#3.1f");
+
+		cubeAxesActor->SetUseTextActor3D(1);
+		cubeAxesActor->SetBounds(imageData->GetBounds());
+		cubeAxesActor->SetCamera(renderer->GetActiveCamera());
+		cubeAxesActor->SetXTitle("X / µm");
+		cubeAxesActor->SetYTitle("Y / µm");
+		cubeAxesActor->SetZTitle("Z / µm");
+		//cubeAxesActor->SetScreenSize(10);
+		cubeAxesActor->SetEnableDistanceLOD(0);
+		cubeAxesActor->SetEnableViewAngleLOD(0);
+
+#if 1
+		vtkNew<vtkStringArray> axisLabels;
+		vtkStdString s;
+		s.resize(64);
+		snprintf(s.data(), 64, "%3.1f", imageData->GetBounds()[4]);
+		axisLabels->InsertNextValue(s);
+		snprintf(s.data(), 64, "%3.1f", imageData->GetBounds()[5]);
+		axisLabels->InsertNextValue(s);
+		cubeAxesActor->SetAxisLabels(2, axisLabels);
+#endif
+
+		cubeAxesActor->DrawXGridlinesOn();
+		cubeAxesActor->DrawYGridlinesOn();
+		cubeAxesActor->DrawZGridlinesOn();
+#if VTK_MAJOR_VERSION == 6
+		cubeAxesActor->SetGridLineLocation(VTK_GRID_LINES_FURTHEST);
+#elif VTK_MAJOR_VERSION > 6
+		cubeAxesActor->SetGridLineLocation(cubeAxesActor->VTK_GRID_LINES_FURTHEST);
+#endif
+
+		cubeAxesActor->XAxisMinorTickVisibilityOff();
+		cubeAxesActor->YAxisMinorTickVisibilityOff();
+		cubeAxesActor->ZAxisMinorTickVisibilityOff();
+
+		cubeAxesActor->SetFlyModeToOuterEdges();
+		renderer->AddActor(cubeAxesActor);
+	}
 
 	vtkSmartPointer<vtkRenderer> renderer;
 };
@@ -107,19 +174,7 @@ void VolumeWidget::setVolume(Volume volume, std::array<double, 4> color, bool co
 {
 	Q_D(VolumeWidget);
 
-	const size_t numPts = volume.voxels();
-
-	vtkNew<vtkUnsignedCharArray> scalars;
-	if (copyData)
-		std::copy_n(volume.data(), numPts, scalars->WritePointer(0, numPts));
-	else
-		scalars->SetArray(volume.data(), numPts, 1);
-
-	vtkNew<vtkStructuredPoints> imageData;
-	imageData->GetPointData()->SetScalars(scalars);
-	imageData->SetDimensions(volume.width(), volume.height(), volume.depth());
-	imageData->SetOrigin(volume.origin()[0] * 1E-3, volume.origin()[1] * 1E-3, volume.origin()[2] * 1E-3);
-	imageData->SetSpacing(volume.voxelSize()[0] * 1E-3, volume.voxelSize()[1] * 1E-3, volume.voxelSize()[2] * 1E-3);
+	auto imageData = d->fromVolume(volume, copyData);
 
 	vtkNew<vtkSmartVolumeMapper> volumeMapper;
 	//volumeMapper->SetBlendModeToIsoSurface();
@@ -144,50 +199,7 @@ void VolumeWidget::setVolume(Volume volume, std::array<double, 4> color, bool co
 	vol->SetMapper(volumeMapper);
 	vol->SetProperty(volumeProperty);
 
-	vtkNew<vtkCubeAxesActor> cubeAxesActor;
-
-	cubeAxesActor->SetXLabelFormat("%-#3.1f");
-	cubeAxesActor->SetYLabelFormat("%-#3.1f");
-	cubeAxesActor->SetZLabelFormat("%-#3.1f");
-
-	cubeAxesActor->SetUseTextActor3D(1);
-	cubeAxesActor->SetBounds(vol->GetBounds());
-	cubeAxesActor->SetCamera(d->renderer->GetActiveCamera());
-	cubeAxesActor->SetXTitle("X / µm");
-	cubeAxesActor->SetYTitle("Y / µm");
-	cubeAxesActor->SetZTitle("Z / µm");
-	//cubeAxesActor->SetScreenSize(10);
-	cubeAxesActor->SetEnableDistanceLOD(0);
-	cubeAxesActor->SetEnableViewAngleLOD(0);
-
-#if 1
-	vtkNew<vtkStringArray> axisLabels;
-	vtkStdString s;
-	s.resize(64);
-	snprintf(s.data(), 64, "%3.1f", vol->GetBounds()[4]);
-	axisLabels->InsertNextValue(s);
-	snprintf(s.data(), 64, "%3.1f", vol->GetBounds()[5]);
-	axisLabels->InsertNextValue(s);
-	cubeAxesActor->SetAxisLabels(2, axisLabels);
-#endif
-
-	cubeAxesActor->DrawXGridlinesOn();
-	cubeAxesActor->DrawYGridlinesOn();
-	cubeAxesActor->DrawZGridlinesOn();
-#if VTK_MAJOR_VERSION == 6
-	cubeAxesActor->SetGridLineLocation(VTK_GRID_LINES_FURTHEST);
-#elif VTK_MAJOR_VERSION > 6
-	cubeAxesActor->SetGridLineLocation(cubeAxesActor->VTK_GRID_LINES_FURTHEST);
-#endif
-
-	cubeAxesActor->XAxisMinorTickVisibilityOff();
-	cubeAxesActor->YAxisMinorTickVisibilityOff();
-	cubeAxesActor->ZAxisMinorTickVisibilityOff();
-
-	cubeAxesActor->SetFlyModeToOuterEdges();
-	d->renderer->AddActor(cubeAxesActor);
-
-	//cubeAxesActor->PrintSelf(std::cout, vtkIndent(0));
+	d->addCubeActor(imageData);
 
 	d->renderer->AddViewProp(vol);
 	d->renderer->ResetCamera();
@@ -278,6 +290,42 @@ void VolumeWidget::addGraph(std::shared_ptr<SkeletonGraph> graph, const Volume &
 
 		d->renderer->AddActor(actor);
 	}
+	d->renderer->ResetCamera();
+	d->renderWindow()->Render();
+}
+
+void VolumeWidget::addClassifiedVolume(Volume volume, int classes, bool copyData)
+{
+	Q_D(VolumeWidget);
+
+	auto imageData = d->fromVolume(volume, copyData);
+
+	vtkNew<vtkLookupTable> lut;
+	lut->SetNumberOfColors(classes);
+	lut->SetTableRange(0, classes - 1);
+	lut->SetScaleToLinear();
+	lut->Build();
+	lut->SetTableValue(0, 0, 0, 0, 1);
+	lut->SetTableValue(1, 0, 1, 0, 1);
+	lut->SetTableValue(2, 0.25, 0.88, 0.816, 1);
+	lut->SetTableValue(3, 0, 0, 1, 1);
+
+	vtkNew<vtkDiscreteMarchingCubes> surface;
+	surface->SetInputData(imageData);
+	surface->ComputeNormalsOn();
+	surface->GenerateValues(classes, 1, classes);
+
+	vtkNew<vtkPolyDataMapper> mapper;
+	mapper->SetInputConnection(surface->GetOutputPort());
+	mapper->SetLookupTable(lut);
+	mapper->SetScalarRange(0, lut->GetNumberOfColors());
+
+	vtkNew<vtkActor> actor;
+	actor->SetMapper(mapper);
+
+	d->addCubeActor(imageData);
+
+	d->renderer->AddActor(actor);
 	d->renderer->ResetCamera();
 	d->renderWindow()->Render();
 }

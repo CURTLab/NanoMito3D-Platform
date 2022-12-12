@@ -70,8 +70,12 @@ MainWindow::MainWindow(QWidget *parent)
 
 	m_ui->buttonRender->setEnabled(false);
 	m_ui->buttonAnalyse->setEnabled(false);
+	m_ui->buttonClassify->setEnabled(false);
 
 	setWindowTitle(tr("NanoMito3D r%1").arg(GIT_REVISION));
+
+	//m_analyis.loadModel(DEV_PATH "/examples/mitoTrainDataSet.csv");
+	m_analyis.loadModel(DEV_PATH "/examples/mito-model.json");
 
 	connect(&m_analyis, &AnalyzeMitochondria::progressRangeChanged,
 			  m_bar, &QProgressBar::setRange);
@@ -129,6 +133,7 @@ MainWindow::MainWindow(QWidget *parent)
 		m_ui->buttonRender->setEnabled(true);
 		m_ui->buttonAnalyse->setEnabled(true);
 		m_ui->statusbar->showMessage(tr("Rendered volume successfully!"));
+		m_ui->volumeView->clear();
 		m_ui->volumeView->setVolume(m_analyis.volume(), {0, 0, 1, 255});
 		m_ui->frame->setEnabled(true);
 	});
@@ -147,6 +152,7 @@ MainWindow::MainWindow(QWidget *parent)
 		const auto &segments = m_analyis.segments();
 		const float r = std::max({segments.volume.voxelSize()[0], segments.volume.voxelSize()[1], segments.volume.voxelSize()[2]});
 
+		m_ui->buttonClassify->setEnabled(true);
 		m_ui->volumeView->clear();
 		m_ui->volumeView->setVolume(segments.volume, {0., 0., 1., 0.4});
 		std::vector<std::array<float,3>> endPoints;
@@ -156,6 +162,20 @@ MainWindow::MainWindow(QWidget *parent)
 				endPoints.push_back(p);
 		}
 		m_ui->volumeView->addSpheres(endPoints, 0.8f * r, {1.f,0.f,0.f});
+		m_ui->frame->setEnabled(true);
+	});
+
+	connect(m_ui->buttonClassify, &QAbstractButton::released,
+			  this, [this]() {
+		m_ui->frame->setEnabled(false);
+		m_ui->statusbar->showMessage(tr("Classify analyzed volume ..."));
+		m_analyis.classify();
+	});
+
+	connect(&m_analyis, &AnalyzeMitochondria::volumeClassified, this, [this]() {
+		m_ui->statusbar->showMessage(tr("Volume successfully classified!"));
+		m_ui->volumeView->clear();
+		m_ui->volumeView->addClassifiedVolume(m_analyis.classifiedVolume(), m_analyis.numClasses());
 		m_ui->frame->setEnabled(true);
 	});
 }

@@ -24,6 +24,10 @@
 
 #include <QDebug>
 #include <QThreadPool>
+#include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 
 #include "DensityFilter.h"
 #include "Rendering.h"
@@ -171,6 +175,9 @@ void AnalyzeMitochondria::analyze(float sigma, ThresholdMethods thresholdMethod,
 			Skeleton3D::Analysis analysis;
 			auto trees = analysis.calculate(m_skeleton, {}, Skeleton3D::Analysis::NoPruning, true, 0.0, true);
 
+			m_labeledVolume.alloc(m_volume.width(), m_volume.height(), m_volume.depth());
+			std::fill_n(m_labeledVolume.data, m_volume.voxels(), 0);
+
 			dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 
 			qDebug().nospace() << "Analyse skeleton (CPU): " << dur.count() << " s";
@@ -188,6 +195,7 @@ void AnalyzeMitochondria::analyze(float sigma, ThresholdMethods thresholdMethod,
 
 			m_segments.clear();
 
+			int id = 1;
 			for (int i = 0; i < trees.size(); ++i) {
 				const auto &t = trees[i];
 				auto [segment,voxels,box] = trees.extractVolume(filteredVolume, 1, i);
@@ -198,18 +206,17 @@ void AnalyzeMitochondria::analyze(float sigma, ThresholdMethods thresholdMethod,
 
 				// draw segment to new volume and count SMLM signals
 				uint32_t signalCount = 0;
-				for (int z = box.minZ; z <= box.maxZ; ++z) {
-					for (int y = box.minY; y <= box.maxY; ++y) {
-						for (int x = box.minX; x <= box.maxX; ++x) {
-							if (segment(x, y, z)) {
-								segmentedVolume(x, y, z) = 255;
-								//signalCount += static_cast<uint32_t>(tree.countInBox(m_volume.mapVoxel(x, y, z), m_volume.voxelSize()));
-							}
-						}
+				box.forEachVoxel([&](int x, int y, int z) {
+					if (segment(x, y, z)) {
+						segmentedVolume(x, y, z) = 255;
+						m_labeledVolume(x, y, z) = id;
+						//signalCount += static_cast<uint32_t>(tree.countInBox(m_volume.mapVoxel(x, y, z), m_volume.voxelSize()));
 					}
-				}
+				});
 
 				Segment s;
+				s.id = id++;
+				s.boundingBox = box;
 				s.graph = t.graph;
 
 				// fill segment
@@ -253,4 +260,125 @@ void AnalyzeMitochondria::analyze(float sigma, ThresholdMethods thresholdMethod,
 		QThreadPool::globalInstance()->start(func);
 	else
 		func();
+}
+
+void AnalyzeMitochondria::classify(bool threaded)
+{
+	auto func = [this]() {
+		try {
+			if (m_dtree.empty()) {
+				emit error(tr("Classification error"), tr("No model loaded!"));
+				return;
+			}
+
+			cv::Mat result;
+
+			m_classifiedVolume = Volume(m_volume.size(), m_volume.voxelSize(), m_volume.origin());
+			m_classifiedVolume.fill(0);
+
+			std::vector<uint32_t> hist(m_numClasses, 0);
+			uint32_t numVoxels = 0;
+
+			emit progressRangeChanged(0, static_cast<int>(m_segments.size())-1);
+			for (size_t i = 0; i < m_segments.size(); ++i) {
+				cv::Mat dataSet(1, 14, CV_32FC1, &m_segments[i].data);
+				m_dtree->predict(dataSet, result, 0);
+
+				const int prediction = qRound(result.at<float>(0, 0));
+
+				m_segments[i].prediction = prediction;
+
+				m_segments[i].boundingBox.forEachVoxel([&](int x, int y, int z) {
+					if (m_labeledVolume(x, y, z) == m_segments[i].id) {
+						m_classifiedVolume(x, y, z) = prediction;
+						hist[prediction]++;
+						++numVoxels;
+					}
+				});
+
+				emit progressChanged(static_cast<int>(i));
+			}
+
+			for (int i = 1; i < m_numClasses; ++i)
+				qDebug().nospace() << "Class " << i << ": " << (double)hist[i] / numVoxels;
+
+			emit volumeClassified();
+		} catch(std::exception &e) {
+			qCritical().nospace() << tr("AnalyzeMitochondria::classify Error: ") + e.what();
+			emit error(tr("Classification error"), e.what());
+		}
+	};
+
+	if (threaded)
+		QThreadPool::globalInstance()->start(func);
+	else
+		func();
+}
+
+void AnalyzeMitochondria::loadModel(const QString &fileName)
+{
+	const auto fi = QFileInfo(fileName);
+	if (fi.completeSuffix().toLower() == "csv") {
+		// load header names from csv
+		QStringList headerNames;
+
+		QFile file(fileName);
+		if (file.open(QIODevice::ReadOnly)) {
+			headerNames = QString(file.readLine()).trimmed().split(", ");
+			file.close();
+		} else {
+			emit error(tr("Load model"), tr("Could not load dataset! (%1)").arg(fileName));
+			return;
+		}
+
+		// generate training data from csv
+		cv::Ptr<cv::ml::TrainData> tDataContainer = cv::ml::TrainData::loadFromCSV(fileName.toStdString(), 1);
+		cv::Mat trainData = tDataContainer->getTrainSamples();
+		cv::Mat targetData = tDataContainer->getTrainResponses();
+
+		// find number of classes
+		double min, max;
+		cv::minMaxIdx(targetData, &min, &max);
+
+		m_numClasses = qRound(max+1);
+
+		// finally train random forest from csv data
+		m_dtree = cv::ml::RTrees::create();
+		m_dtree->setCalculateVarImportance(true);
+		m_dtree->setMaxCategories(m_numClasses+1);
+		if (!m_dtree->train(trainData, cv::ml::ROW_SAMPLE, targetData)) {
+			emit error(tr("Load model"), tr("Could not train loaded dataset! (%1)").arg(fileName));
+			return;
+		}
+
+		// print variable importance
+		qDebug() << "VarImportance:";
+		cv::Mat importance = m_dtree->getVarImportance();
+		for (int i = 0; i < importance.rows; ++i)
+			qDebug().nospace() << i << ": " << headerNames.at(i) << ": " << importance.at<float>(i, 0);
+	} else if (fi.completeSuffix().toLower() == "json") {
+		// read number of classes directly from json file
+		QFile file(fileName);
+		if (file.open(QIODevice::ReadOnly)) {
+			QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+			file.close();
+
+			const auto root = doc.object()["opencv_ml_rtrees"].toObject();
+			const auto class_labels = root["class_labels"].toArray();
+			m_numClasses = class_labels.size();
+		} else {
+			emit error(tr("Load model"), tr("Could not load dataset! (%1)").arg(fileName));
+			return;
+		}
+		// load model
+		m_dtree = cv::ml::StatModel::load<cv::ml::RTrees>(fileName.toStdString());
+	}
+
+	if (m_dtree.empty()) {
+		emit error(tr("Load model"), tr("Could not load model %1").arg(fileName));
+		return;
+	}
+
+	qDebug() << "Samples:" << m_dtree->getVarCount();
+	qDebug() << "Num classes:" << m_numClasses;
 }

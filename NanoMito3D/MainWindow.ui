@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>886</width>
-    <height>660</height>
+    <width>892</width>
+    <height>710</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -338,6 +338,22 @@
          </widget>
         </item>
         <item>
+         <widget class="QGroupBox" name="groupBox_4">
+          <property name="title">
+           <string>Classification</string>
+          </property>
+          <layout class="QFormLayout" name="formLayout_4">
+           <item row="0" column="1">
+            <widget class="QPushButton" name="buttonClassify">
+             <property name="text">
+              <string>Classify</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
          <spacer name="verticalSpacer">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -369,7 +385,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>886</width>
+     <width>892</width>
      <height>21</height>
     </rect>
    </property>

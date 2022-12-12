@@ -23,11 +23,14 @@
 #define BOUNDS_H
 
 #include <array>
+#include <functional>
 
 template <typename T>
 class Bounds
 {
 public:
+	inline constexpr Bounds() : minX(0), maxX(0), minY(0), maxY(0), minZ(0), maxZ(0) {}
+
 	inline constexpr Bounds(T minX, T maxX, T minY, T maxY, T minZ, T maxZ)
 		: minX(minX), maxX(maxX), minY(minY), maxY(maxY), minZ(minZ), maxZ(maxZ)
 	{}
@@ -66,6 +69,15 @@ public:
 				 contains(b.maxX, b.minY, b.maxZ) ||
 				 contains(b.minX, b.maxY, b.maxZ) ||
 				 contains(b.maxX, b.maxY, b.maxZ);
+	}
+
+	inline void forEachVoxel(std::function<void(T x, T y, T z)> func, T stepSize = T(1)) const {
+		for (T z = minZ; z <= maxZ; z += stepSize) {
+			for (T y = minY; y <= maxY; y += stepSize) {
+				for (T x = minX; x <= maxX; x += stepSize)
+					func(x, y, z);
+			}
+		}
 	}
 
 	T minX, maxX;

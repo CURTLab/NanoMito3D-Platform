@@ -139,10 +139,10 @@ public:
 	const Volume &taggedImage() const;
 	const Volume &shortPathImage() const;
 
-	const std::vector<Point> &listOfEndPoints(int tree) const
+	inline const std::vector<Point> &listOfEndPoints(int tree) const
 	{ return m_trees[tree].endPoints; }
 
-	const std::shared_ptr<SkeletonGraph> &graph(int tree) const
+	inline const std::shared_ptr<SkeletonGraph> &graph(int tree) const
 	{ return m_trees[tree].graph; }
 
 	std::vector<Point> traverse(const VertexPtr &v1, const VertexPtr &v2) const;
