@@ -23,10 +23,14 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QProgressBar>
 
 #include <opencv2/opencv.hpp>
 
 #include <memory>
+
+#include "CellCounter.h"
+#include "LocalMaximumSearch.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -42,10 +46,13 @@ public:
 
 private:
 	void import(const QString &fileName);
+	void countCells();
 
 	std::unique_ptr<Ui::MainWindow> m_ui;
+	CellCounter m_model;
+	LocalMaximumSearch m_nms;
+	QProgressBar *m_bar;
 	cv::Mat m_image;
-	cv::Mat m_result;
 	QString m_fileName;
 
 };

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1105</width>
-    <height>699</height>
+    <height>752</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -20,22 +20,40 @@
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
       </property>
-      <widget class="QWidget" name="">
+      <widget class="QFrame" name="frame">
+       <property name="frameShape">
+        <enum>QFrame::NoFrame</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Raised</enum>
+       </property>
        <layout class="QVBoxLayout" name="verticalLayout">
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
         <item>
          <widget class="QGroupBox" name="groupBox">
           <property name="title">
-           <string>Image file:</string>
+           <string>Microscopy Image</string>
           </property>
-          <layout class="QHBoxLayout" name="horizontalLayout_3">
-           <item>
+          <layout class="QFormLayout" name="formLayout_3">
+           <item row="0" column="0">
             <widget class="QLabel" name="label_7">
              <property name="text">
               <string>File:</string>
              </property>
             </widget>
            </item>
-           <item>
+           <item row="0" column="1">
             <layout class="QHBoxLayout" name="horizontalLayout_2">
              <item>
               <widget class="QLineEdit" name="editFile"/>
@@ -48,6 +66,35 @@
               </widget>
              </item>
             </layout>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_8">
+             <property name="text">
+              <string>Pixel size:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QDoubleSpinBox" name="spinPixelSize">
+             <property name="suffix">
+              <string> µm</string>
+             </property>
+             <property name="decimals">
+              <number>3</number>
+             </property>
+             <property name="minimum">
+              <double>0.010000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>1000.000000000000000</double>
+             </property>
+             <property name="singleStep">
+              <double>0.100000000000000</double>
+             </property>
+             <property name="value">
+              <double>0.680000000000000</double>
+             </property>
+            </widget>
            </item>
           </layout>
          </widget>
@@ -108,6 +155,16 @@
              </property>
              <property name="maximum">
               <number>512</number>
+             </property>
+             <property name="value">
+              <number>64</number>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QPushButton" name="buttonCalculate">
+             <property name="text">
+              <string>Calculate</string>
              </property>
             </widget>
            </item>
@@ -172,6 +229,12 @@
            </item>
            <item row="3" column="1">
             <widget class="QDoubleSpinBox" name="spinCellsPer">
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+             <property name="buttonSymbols">
+              <enum>QAbstractSpinBox::NoButtons</enum>
+             </property>
              <property name="prefix">
               <string/>
              </property>
@@ -222,8 +285,8 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="">
-       <layout class="QHBoxLayout" name="horizontalLayout">
+      <widget class="QWidget" name="layoutWidget">
+       <layout class="QVBoxLayout" name="verticalLayout_3">
         <item>
          <widget class="ImagePlotWidget" name="plot1" native="true"/>
         </item>

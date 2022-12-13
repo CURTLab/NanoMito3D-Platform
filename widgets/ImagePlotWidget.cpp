@@ -34,27 +34,25 @@
 #include <qwt_plot_rescaler.h>
 #include <qwt_color_map.h>
 #include <qwt_plot_canvas.h>
+#include <qwt_plot_shapeitem.h>
 
-class RasterData : public QwtRasterData
+class ImagePlotRasterData : public QwtRasterData
 {
 	cv::Mat m_image;
 public:
-	inline RasterData(cv::Mat image, QwtInterval interval)
+	inline ImagePlotRasterData(const cv::Mat &image, QwtInterval interval)
 	{ setData(image, interval); }
 
 	virtual inline double value(double x, double y) const override {
-		if (m_image.empty())
-			return 0.0;
-		const double d = m_image.at<double>(static_cast<int>(std::floor(y)), static_cast<int>(std::floor(x)));
-		return d;
+		return m_image.empty() ? 0.0 : m_image.at<double>(static_cast<int>(std::floor(x)), static_cast<int>(std::floor(y)));
 	}
 
-	const cv::Mat &image() const { return m_image; }
+	inline constexpr const cv::Mat &image() const { return m_image; }
 
-	inline void setData(cv::Mat image, QwtInterval interval) {
+	inline void setData(const cv::Mat &image, QwtInterval interval) {
 		image.convertTo(m_image, CV_64F);
-		setInterval(Qt::XAxis, QwtInterval(0, image.cols-1E-9));
-		setInterval(Qt::YAxis, QwtInterval(0, image.rows-1E-9));
+		setInterval(Qt::XAxis, QwtInterval(0, image.rows-1E-9));
+		setInterval(Qt::YAxis, QwtInterval(0, image.cols-1E-9));
 		setInterval(Qt::ZAxis, interval);
 	}
 
@@ -72,10 +70,10 @@ public:
 
 };
 
-class ImagePlotWidgetScaleDraw : public QwtScaleDraw
+class ImagePlotScaleDraw : public QwtScaleDraw
 {
 public:
-	inline ImagePlotWidgetScaleDraw() : QwtScaleDraw(), m_unitScale(1.0)
+	inline ImagePlotScaleDraw() : QwtScaleDraw(), m_unitScale(1.0)
 	{
 		setTickLength(QwtScaleDiv::MajorTick, 14);
 		setTickLength(QwtScaleDiv::MediumTick, 6);
@@ -194,7 +192,7 @@ class ImagePlotWidgetPrivate : public QwtPlot
 public:
 	QwtPlotSpectrogram *spectrogram;
 	//QwtRasterData *data;
-	RasterData *data;
+	ImagePlotRasterData *data;
 	QwtPlotRescaler *rescaler;
 
 	inline ImagePlotWidgetPrivate(QWidget *parent)
@@ -203,8 +201,10 @@ public:
 		, data(nullptr)
 		, rescaler(nullptr)
 	{
-		axisWidget(QwtPlot::xBottom)->setScaleDraw(new ImagePlotWidgetScaleDraw);
-		axisWidget(QwtPlot::yLeft)->setScaleDraw(new ImagePlotWidgetScaleDraw);
+		setMinimumSize(100, 100);
+
+		axisWidget(QwtPlot::xBottom)->setScaleDraw(new ImagePlotScaleDraw);
+		axisWidget(QwtPlot::yLeft)->setScaleDraw(new ImagePlotScaleDraw);
 
 		setAxisAutoScale(QwtPlot::xBottom, false);
 		setAxisAutoScale(QwtPlot::yLeft, false);
@@ -257,16 +257,14 @@ void ImagePlotWidget::setImage(const cv::Mat &image)
 	cv::minMaxLoc(image, &minVal, &maxVal);
 
 	QwtInterval intensity(minVal, maxVal);
-
-	qDebug() << image.rows << image.cols << minVal << maxVal;
-
-	d->data = new RasterData(image, intensity);
+	d->data = new ImagePlotRasterData(image, intensity);
 	d->spectrogram->setData(m_d->data);
+	d->spectrogram->setZ(8);
 
 	// Only leave a small border to the image.
 	// If image size is selected as inverval program will crash!
-	QwtInterval xInt(0, image.cols-1E-9);
-	QwtInterval yInt(0, image.rows-1E-9);
+	QwtInterval xInt(0, image.rows-1E-9);
+	QwtInterval yInt(0, image.cols-1E-9);
 
 	d->setAxisScale(QwtPlot::xBottom, xInt.minValue(), xInt.maxValue());
 	// in order to invert the y axis
@@ -289,5 +287,38 @@ void ImagePlotWidget::clear()
 	d->data = nullptr;
 	d->detachItems(QwtPlotItem::Rtti_PlotCurve);
 	d->detachItems(QwtPlotItem::Rtti_PlotMarker);
+	d->replot();
+}
+
+void ImagePlotWidget::clearAnnotation()
+{
+	Q_D(ImagePlotWidget);
+	d->detachItems(QwtPlotItem::Rtti_PlotCurve);
+	d->detachItems(QwtPlotItem::Rtti_PlotMarker);
+	d->replot();
+}
+
+void ImagePlotWidget::addCircles(const QVector<QPointF> &dataPoints, QColor color, qreal radius)
+{
+	Q_D(ImagePlotWidget);
+
+	QColor fillColor(color);
+	fillColor.setAlpha(100);
+
+	QwtPlotShapeItem *item = new QwtPlotShapeItem;
+	item->setItemAttribute(QwtPlotItem::Legend, false);
+	item->setRenderHint(QwtPlotItem::RenderAntialiased, true);
+	item->setZ(10);
+
+	QPainterPath path;
+	for (const auto &p : dataPoints)
+		path.addEllipse(p, radius, radius);
+
+	item->setShape(path);
+	item->setPen(color);
+	item->setBrush(fillColor);
+
+	item->attach(d);
+
 	d->replot();
 }

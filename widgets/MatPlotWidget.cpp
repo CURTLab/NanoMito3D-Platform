@@ -32,7 +32,9 @@
 #include <qwt_plot_canvas.h>
 #include <qwt_plot_marker.h>
 #include <qwt_plot_barchart.h>
+#include <qwt_plot_histogram.h>
 #include <qwt_column_symbol.h>
+#include <qwt_symbol.h>
 
 class MatPlotLabelScaleDraw : public QwtScaleDraw
 {
@@ -167,47 +169,39 @@ public:
 
 };
 
-class MatPlotWidgetPrivate
+class MatPlotWidgetPrivate : public QwtPlot
 {
 public:
 	inline MatPlotWidgetPrivate()
-		: plot(new QwtPlot)
-		, tick(new MatPlotTick)
+		: tick(new MatPlotTick)
 		, grid(new QwtPlotGrid)
 	{
-		tick->attach(plot);
+		tick->attach(this);
 
-		plot->setMinimumSize(100, 100);
+		setMinimumSize(100, 100);
 
-		plot->axisWidget(QwtPlot::xBottom)->setScaleDraw(new MatPlotScaleDraw);
-		//plot->axisWidget(QwtPlot::xTop)->setScaleDraw(new MatPlotScaleDraw);
-		plot->axisWidget(QwtPlot::yLeft)->setScaleDraw(new MatPlotScaleDraw);
-		//plot->axisWidget(QwtPlot::yRight)->setScaleDraw(new MatPlotScaleDraw);
+		axisWidget(QwtPlot::xBottom)->setScaleDraw(new MatPlotScaleDraw);
+		axisWidget(QwtPlot::yLeft)->setScaleDraw(new MatPlotScaleDraw);
+		setAxisAutoScale(QwtPlot::xBottom, true);
+		setAxisAutoScale(QwtPlot::yLeft, true);
 
 		grid->setMajorPen(QPen(QColor(235, 235, 235), 1.25));
-		grid->attach(plot);
+		grid->attach(this);
 
-		plot->plotLayout()->setAlignCanvasToScales(true);
-		plot->plotLayout()->setCanvasMargin(0, QwtPlot::xBottom);
-		plot->plotLayout()->setCanvasMargin(0, QwtPlot::xTop);
-		plot->plotLayout()->setCanvasMargin(0, QwtPlot::yLeft);
-		plot->plotLayout()->setCanvasMargin(0, QwtPlot::yRight);
-		plot->setStyleSheet("background-color: transparent;");
+		plotLayout()->setAlignCanvasToScales(true);
+		plotLayout()->setCanvasMargin(0, QwtPlot::xBottom);
+		plotLayout()->setCanvasMargin(0, QwtPlot::xTop);
+		plotLayout()->setCanvasMargin(0, QwtPlot::yLeft);
+		plotLayout()->setCanvasMargin(0, QwtPlot::yRight);
+		setStyleSheet("background-color: transparent;");
 
-		canvas = qobject_cast<QwtPlotCanvas*>(plot->canvas());
+		canvas = qobject_cast<QwtPlotCanvas*>(QwtPlot::canvas());
 		canvas->setFrameStyle(QFrame::Plain);
 		canvas->setBorderRadius(0.0);
 		canvas->setCursor(Qt::ArrowCursor);
 		canvas->setStyleSheet("background: #fff;");
 	}
 
-
-	inline ~MatPlotWidgetPrivate()
-	{
-		delete plot;
-	}
-
-	QwtPlot *plot;
 	MatPlotTick *tick;
 	QwtPlotGrid *grid;
 	QwtPlotCanvas *canvas;
@@ -223,10 +217,33 @@ MatPlotWidget::MatPlotWidget(QWidget *parent)
 	layout->setContentsMargins(0, 0, 0, 0);
 	setLayout(layout);
 
-	layout->addWidget(d->plot);
+	layout->addWidget(d);
 }
 
-void MatPlotWidget::addBars(const QStringList &values, const QVector<double> &height, const QVector<QColor> &colors, double width)
+void MatPlotWidget::hist(const QVector<double> &values, double min, double max, int nbins)
+{
+	Q_D(MatPlotWidget);
+
+	QVector<QwtIntervalSample> samples(nbins);
+	const double range = max - min;
+	for (int i = 0; i < nbins; i++)
+		samples[i] = QwtIntervalSample(0, i * range / nbins, (i + 1) * range / nbins);
+
+	for (const double &val:values) {
+		const int index = qBound(0, qRound((val - min)*nbins/range), nbins - 1);
+		samples[index].value += 1;
+	}
+
+	QwtPlotHistogram *hp = new QwtPlotHistogram();
+	hp->setBrush(QColor(53,42,134));
+	hp->setPen(QPen(QColor(0,0,0), 1.0));
+	hp->setSamples(samples);
+	hp->attach(d);
+
+	d->replot();
+}
+
+void MatPlotWidget::bar(const QStringList &values, const QVector<double> &height, const QVector<QColor> &colors, double width)
 {
 	Q_D(MatPlotWidget);
 
@@ -236,12 +253,102 @@ void MatPlotWidget::addBars(const QStringList &values, const QVector<double> &he
 	chart->setSpacing(20);
 	chart->setMargin(3);
 	chart->setSamples(height);
-	chart->attach(d->plot);
+	chart->attach(d);
 
-	d->plot->axisWidget(QwtPlot::xBottom)->setScaleDraw(new MatPlotLabelScaleDraw(values));
-	d->plot->setAxisScale(QwtPlot::xBottom, -1, height.size(), 1.0);
+	d->axisWidget(QwtPlot::xBottom)->setScaleDraw(new MatPlotLabelScaleDraw(values));
+	d->setAxisScale(QwtPlot::xBottom, -1, height.size(), 1.0);
 
-	d->plot->replot();
+	d->replot();
+}
+
+void MatPlotWidget::replot()
+{
+	Q_D(MatPlotWidget);
+	d->replot();
+	d->repaint();
+}
+
+void MatPlotWidget::clear()
+{
+	Q_D(MatPlotWidget);
+	d->detachItems(QwtPlotItem::Rtti_PlotBarChart);
+	d->detachItems(QwtPlotItem::Rtti_PlotSpectrogram);
+	d->detachItems(QwtPlotItem::Rtti_PlotHistogram);
+	d->detachItems(QwtPlotItem::Rtti_PlotCurve);
+	d->detachItems(QwtPlotItem::Rtti_PlotMarker);
+	d->axisWidget(QwtPlot::xBottom)->setScaleDraw(new MatPlotScaleDraw);
+	d->axisWidget(QwtPlot::yLeft)->setScaleDraw(new MatPlotScaleDraw);
+	d->setAxisAutoScale(QwtPlot::xBottom, true);
+	d->setAxisAutoScale(QwtPlot::yLeft, true);
+	d->replot();
+}
+
+void MatPlotWidget::setTitle(const QString &title)
+{
+	Q_D(MatPlotWidget);
+	QFont font("Helvetica", 9, 1);
+	font.setBold(true);
+	QwtText text(title);
+	text.setFont(font);
+	d->setTitle(text);
+}
+
+void MatPlotWidget::setXLabel(const QString &label)
+{
+	Q_D(MatPlotWidget);
+	QwtText text(label);
+	QFont font("Helvetica", 9, 1);
+	text.setFont(font);
+	d->setAxisTitle(QwtPlot::xBottom, text);
+}
+
+void MatPlotWidget::setYLabel(const QString &label)
+{
+	Q_D(MatPlotWidget);
+	QwtText text(label);
+	QFont font("Helvetica", 9, 1);
+	text.setFont(font);
+	d->setAxisTitle(QwtPlot::yLeft, text);
+}
+
+void MatPlotWidget::setXScale(double min, double max)
+{
+	Q_D(MatPlotWidget);
+	d->setAxisAutoScale(QwtPlot::xBottom, false);
+	d->setAxisScale(QwtPlot::xBottom, min, max);
+	d->replot();
+}
+
+void MatPlotWidget::setYScale(double min, double max)
+{
+	Q_D(MatPlotWidget);
+	d->setAxisAutoScale(QwtPlot::yLeft, false);
+	d->setAxisScale(QwtPlot::yLeft, min, max);
+	d->replot();
+}
+
+void MatPlotWidget::setLimits(double lowerx, double upperx, double lowery, double uppery)
+{
+	Q_D(MatPlotWidget);
+	d->setAxisAutoScale(QwtPlot::xBottom, false);
+	d->setAxisScale(QwtPlot::xBottom, lowerx, upperx);
+	d->setAxisAutoScale(QwtPlot::yLeft, false);
+	d->setAxisScale(QwtPlot::yLeft, lowery, uppery);
+	d->replot();
+}
+
+std::tuple<double, double> MatPlotWidget::xScale() const
+{
+	const Q_D(MatPlotWidget);
+	return {d->axisScaleDiv(QwtPlot::xBottom).lowerBound(),
+			  d->axisScaleDiv(QwtPlot::xBottom).upperBound()};
+}
+
+std::tuple<double, double> MatPlotWidget::yScale() const
+{
+	const Q_D(MatPlotWidget);
+	return {d->axisScaleDiv(QwtPlot::yLeft).lowerBound(),
+			  d->axisScaleDiv(QwtPlot::yLeft).upperBound()};
 }
 
 void MatPlotWidget::addText(const QPointF &postion, const QString &text, QColor color, Qt::Alignment alignment)
@@ -259,83 +366,23 @@ void MatPlotWidget::addText(const QPointF &postion, const QString &text, QColor 
 	item->setXValue(postion.x());
 	item->setYValue(postion.y());
 	item->setLabelAlignment(alignment);
-	item->attach(d->plot);
+	item->attach(d);
 
-	d->plot->replot();
+	d->replot();
 }
 
-void MatPlotWidget::replot()
+void MatPlotWidget::addVLine(qreal position, QColor color, qreal width)
 {
 	Q_D(MatPlotWidget);
-	d->plot->replot();
-	d->plot->repaint();
-}
 
-void MatPlotWidget::clear()
-{
-	Q_D(MatPlotWidget);
-	d->plot->detachItems(QwtPlotItem::Rtti_PlotBarChart);
-	d->plot->detachItems(QwtPlotItem::Rtti_PlotSpectrogram);
-	d->plot->detachItems(QwtPlotItem::Rtti_PlotHistogram);
-	d->plot->detachItems(QwtPlotItem::Rtti_PlotCurve);
-	d->plot->detachItems(QwtPlotItem::Rtti_PlotMarker);
-	d->plot->axisWidget(QwtPlot::xBottom)->setScaleDraw(new MatPlotScaleDraw);
-	d->plot->axisWidget(QwtPlot::yLeft)->setScaleDraw(new MatPlotScaleDraw);
-	d->plot->setAxisAutoScale(QwtPlot::xBottom, true);
-	d->plot->setAxisAutoScale(QwtPlot::yLeft, false);
-	d->plot->replot();
-}
+	QPen pen(color, width);
 
-void MatPlotWidget::setTitle(const QString &title)
-{
-	Q_D(MatPlotWidget);
-	QFont font("Helvetica", 9, 1);
-	font.setBold(true);
-	QwtText text(title);
-	text.setFont(font);
-	d->plot->setTitle(text);
-}
+	QwtPlotMarker *marker = new QwtPlotMarker;
+	marker->setXValue(position);
+	marker->setLineStyle(QwtPlotMarker::VLine);
+	marker->setLinePen(QPen(color,width));
 
-void MatPlotWidget::setXLabel(const QString &label)
-{
-	Q_D(MatPlotWidget);
-	QwtText text(label);
-	QFont font("Helvetica", 9, 1);
-	text.setFont(font);
-	d->plot->setAxisTitle(QwtPlot::xBottom, text);
-}
+	marker->attach(d);
 
-void MatPlotWidget::setYLabel(const QString &label)
-{
-	Q_D(MatPlotWidget);
-	QwtText text(label);
-	QFont font("Helvetica", 9, 1);
-	text.setFont(font);
-	d->plot->setAxisTitle(QwtPlot::yLeft, text);
-}
-
-void MatPlotWidget::setXScale(double min, double max)
-{
-	Q_D(MatPlotWidget);
-	d->plot->setAxisAutoScale(QwtPlot::xBottom, false);
-	d->plot->setAxisScale(QwtPlot::xBottom, min, max);
-	d->plot->replot();
-}
-
-void MatPlotWidget::setYScale(double min, double max)
-{
-	Q_D(MatPlotWidget);
-	d->plot->setAxisAutoScale(QwtPlot::yLeft, false);
-	d->plot->setAxisScale(QwtPlot::yLeft, min, max);
-	d->plot->replot();
-}
-
-void MatPlotWidget::setLimits(double lowerx, double upperx, double lowery, double uppery)
-{
-	Q_D(MatPlotWidget);
-	d->plot->setAxisAutoScale(QwtPlot::xBottom, false);
-	d->plot->setAxisScale(QwtPlot::xBottom, lowerx, upperx);
-	d->plot->setAxisAutoScale(QwtPlot::yLeft, false);
-	d->plot->setAxisScale(QwtPlot::yLeft, lowery, uppery);
-	d->plot->replot();
+	d->replot();
 }

@@ -22,6 +22,8 @@ include_directories("../../widgets")
 set(PROJECT_SOURCES
     main.cpp
     MainWindow.cpp MainWindow.h MainWindow.ui
+    CellCounter.h CellCounter.cpp
+    LocalMaximumSearch.h LocalMaximumSearch.cpp
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
@@ -51,6 +53,11 @@ set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
     MACOSX_BUNDLE TRUE
     WIN32_EXECUTABLE TRUE
 )
+
+add_custom_command(TARGET CellCounterApp POST_BUILD        # Adds a post-build event to MyTest
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../examples/CellCounterModel.pb"      # <--this is in-file
+        $<TARGET_FILE_DIR:CellCounterApp>)                 # <--this is out-file path
 
 install(TARGETS ${CMAKE_PROJECT_NAME}
     BUNDLE DESTINATION .

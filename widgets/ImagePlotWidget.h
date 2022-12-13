@@ -36,6 +36,10 @@ public:
 
 	void setImage(const cv::Mat &image);
 	void clear();
+	void clearAnnotation();
+
+	// annotation
+	void addCircles(const QVector<QPointF> &dataPoints, QColor color, qreal radius);
 
 private:
 	std::unique_ptr<ImagePlotWidgetPrivate> const m_d;

@@ -33,8 +33,8 @@ class MatPlotWidget : public QWidget
 public:
 	MatPlotWidget(QWidget *parent = nullptr);
 
-	void addBars(const QStringList &values, const QVector<double> &height, const QVector<QColor> &colors, double width = 0.8);
-	void addText(const QPointF &postion, const QString &text, QColor color = Qt::black, Qt::Alignment alignment = Qt::AlignCenter);
+	void hist(const QVector<double> &values, double min, double max, int nbins = 100);
+	void bar(const QStringList &values, const QVector<double> &height, const QVector<QColor> &colors, double width = 0.8);
 
 	void replot();
 	void clear();
@@ -46,6 +46,13 @@ public:
 	void setXScale(double min, double max);
 	void setYScale(double min, double max);
 	void setLimits(double lowerx, double upperx, double lowery, double uppery);
+
+	std::tuple<double,double> xScale() const;
+	std::tuple<double,double> yScale() const;
+
+	// annotations
+	void addText(const QPointF &postion, const QString &text, QColor color = Qt::black, Qt::Alignment alignment = Qt::AlignCenter);
+	void addVLine(qreal position, QColor color, qreal width = 1.0);
 
 private:
 	std::unique_ptr<MatPlotWidgetPrivate> const m_d;
