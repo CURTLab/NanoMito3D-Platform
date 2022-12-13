@@ -1,7 +1,23 @@
 # NanoMito3D-Platform
-Platform for 3D SMLM mitochondrial network analysis
 
-## Based on
+NanoMito3D-Platform contains software applications for:
+ * CellCounterApp: Automated cell counting from phase constrast image
+ * BleedThroughCorrection: Fluorescent bleed-through correction from two-color 3D single molecule localization microscopy files
+ * NanoMito3D: 3D mitochondrial network analysis with GPU acceleration from (multicolor) 3D single molecule localization microscopy files
+ 
+![Thumbnail](https://raw.githubusercontent.com/CURTLab/NanoMito3D-Platform/main/thumbnail_nanomito3D.png)
+
+## NanoMito3D is based on
 * [Skeletonize3D](https://imagej.net/plugins/skeletonize3d) (ImageJ Plugin)
 * [AnalyzeSkeleton](https://imagej.net/plugins/analyze-skeleton) (ImageJ Plugin)
 * [cuNSearch](https://github.com/InteractiveComputerGraphics/cuNSearch) (compute neighborhood information on GPU)
+
+# Tested prerequisites for compilation
+* Windows 10
+* Visual Studio 2019
+* OpenCV 4.5.5
+* VTK 9.0
+* Qwt 6.1.6
+* protobuf 3.21.9
+* CUDA 7.0
+* CMake 3.18.1
