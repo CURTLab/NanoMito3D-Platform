@@ -75,8 +75,8 @@ MainWindow::MainWindow(QWidget *parent)
 
 	setWindowTitle(tr("NanoMito3D r%1").arg(GIT_REVISION));
 
-	//m_analyis.loadModel(DEV_PATH "/examples/mitoTrainDataSet.csv");
-	m_analyis.loadModel(DEV_PATH "/examples/mito-model.json");
+	m_analyis.loadModel(DEV_PATH "/examples/mitoTrainDataSet.csv");
+	//m_analyis.loadModel(DEV_PATH "/examples/mito-model.json");
 
 	connect(&m_analyis, &AnalyzeMitochondria::progressRangeChanged,
 			  m_bar, &QProgressBar::setRange);
@@ -181,7 +181,7 @@ MainWindow::MainWindow(QWidget *parent)
 		auto bars = m_analyis.classificationResult();
 		if (bars.size() == 3) {
 			m_ui->plot->clear();
-			m_ui->plot->addBars({"Puncture", "Rod", "Network"}, bars, {QColor(0,255,0),QColor(64, 224, 208),QColor(0,0,255)});
+			m_ui->plot->bar({"Puncture", "Rod", "Network"}, bars, {QColor(0,255,0),QColor(64, 224, 208),QColor(0,0,255)});
 			double max = 0;
 			for (int i = 0; i < bars.size(); ++i) {
 				max = std::max(max, bars[i]);
