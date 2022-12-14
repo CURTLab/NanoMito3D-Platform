@@ -20,7 +20,6 @@ set(PROJECT_SOURCES
     Correction.h Correction.cpp
     MainWindow.cpp MainWindow.h MainWindow.ui
     Rendering.h Rendering.cpp
-    resources/res.qrc
 )
 
 include_directories("../common" "../widgets")

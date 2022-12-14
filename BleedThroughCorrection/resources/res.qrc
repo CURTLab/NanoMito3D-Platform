@@ -1,8 +1,0 @@
-<RCC>
-    <qresource prefix="/icons">
-        <file>disk.png</file>
-        <file>draw_eraser.png</file>
-        <file>folder.png</file>
-        <file>pencil.png</file>
-    </qresource>
-</RCC>

@@ -54,7 +54,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 	QTreeWidgetItem *item = new QTreeWidgetItem;
 	item->setIcon(0, QIcon(pix));
-	item->setText(0, "Background");
+	item->setText(0, tr("Bleed-Through Signal"));
 
 	m_ui->treeLabels->addTopLevelItem(item);
 	m_ui->treeLabels->setCurrentItem(item);
@@ -62,27 +62,28 @@ MainWindow::MainWindow(QWidget *parent)
 	pix.fill(Qt::blue);
 	item = new QTreeWidgetItem;
 	item->setIcon(0, QIcon(pix));
-	item->setText(0, "Foreground");
+	item->setText(0, tr("Correct Signal"));
 	m_ui->treeLabels->addTopLevelItem(item);
+
+	m_ui->preview->setPaintToolColor(Qt::green);
+	m_ui->preview->setPaintToolWidth(25);
 
 	m_ui->treeLabels->resizeColumnToContents(0);
 	m_ui->treeLabels->setRootIsDecorated(false);
 
-	QActionGroup *g = new QActionGroup(this);
-	g->addAction(m_ui->actionBrush);
-	g->addAction(m_ui->actionErase);
-	g->setExclusive(true);
-
-	connect(g, &QActionGroup::triggered, [this](QAction *a) {
-		if (a == m_ui->actionErase)
-			m_ui->preview->setPaintToolColor(Qt::transparent);
-		else if (a == m_ui->actionBrush)
-			m_ui->preview->setPaintToolColor(m_ui->treeLabels->currentItem()->icon(0).pixmap(1).toImage().pixelColor(0,0));
-	});
 	connect(m_ui->treeLabels, &QTreeWidget::currentItemChanged,
 			  [this](QTreeWidgetItem *current, QTreeWidgetItem *) {
 		if (m_ui->actionBrush->isChecked())
 			m_ui->preview->setPaintToolColor(current->icon(0).pixmap(1).toImage().pixelColor(0,0));
+	});
+
+	connect(m_ui->comboMode,  qOverload<int>(&QComboBox::currentIndexChanged),
+			  this, [this](int index) {
+		if (index == 0) {
+			m_ui->preview->setPaintToolColor(Qt::transparent);
+		} else {
+			m_ui->preview->setPaintToolColor(m_ui->treeLabels->currentItem()->icon(0).pixmap(1).toImage().pixelColor(0,0));
+		}
 	});
 
 	setWindowTitle("Bleed-Through Correction");

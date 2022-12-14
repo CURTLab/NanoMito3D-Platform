@@ -125,38 +125,50 @@
          </widget>
         </item>
         <item>
-         <widget class="QGroupBox" name="toolGroupBox">
+         <widget class="QGroupBox" name="groupBox">
           <property name="title">
-           <string>Tool</string>
+           <string>Labeling</string>
           </property>
-          <layout class="QFormLayout" name="formLayout">
+          <layout class="QFormLayout" name="formLayout_3">
            <item row="0" column="0">
+            <widget class="QLabel" name="label_3">
+             <property name="text">
+              <string>Mode:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QComboBox" name="comboMode">
+             <item>
+              <property name="text">
+               <string>Draw</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Erase</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="1" column="0">
             <widget class="QLabel" name="label_8">
              <property name="text">
               <string>Pen width:</string>
              </property>
             </widget>
            </item>
-           <item row="0" column="1">
+           <item row="1" column="1">
             <widget class="QSpinBox" name="spinPenWidth">
              <property name="maximum">
               <number>999</number>
              </property>
              <property name="value">
-              <number>5</number>
+              <number>25</number>
              </property>
             </widget>
            </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
-         <widget class="QGroupBox" name="groupBox">
-          <property name="title">
-           <string>Labeling</string>
-          </property>
-          <layout class="QVBoxLayout" name="_2">
-           <item>
+           <item row="2" column="0" colspan="2">
             <widget class="QTreeWidget" name="treeLabels">
              <attribute name="headerVisible">
               <bool>false</bool>
@@ -210,22 +222,6 @@
    </property>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <widget class="QToolBar" name="toolBar">
-   <property name="windowTitle">
-    <string>toolBar</string>
-   </property>
-   <attribute name="toolBarArea">
-    <enum>TopToolBarArea</enum>
-   </attribute>
-   <attribute name="toolBarBreak">
-    <bool>false</bool>
-   </attribute>
-   <addaction name="actionOpen"/>
-   <addaction name="actionSave"/>
-   <addaction name="separator"/>
-   <addaction name="actionBrush"/>
-   <addaction name="actionErase"/>
-  </widget>
   <action name="actionBrush">
    <property name="checkable">
     <bool>true</bool>
@@ -234,7 +230,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="resources/res.qrc">
+    <iconset>
      <normaloff>:/icons/pencil.png</normaloff>
      <disabledoff>:/icons/brush_dark_dis.png</disabledoff>:/icons/pencil.png</iconset>
    </property>
@@ -247,7 +243,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="resources/res.qrc">
+    <iconset>
      <normaloff>:/icons/draw_eraser.png</normaloff>
      <disabledoff>:/icons/eraser_dark.png</disabledoff>:/icons/draw_eraser.png</iconset>
    </property>
@@ -257,7 +253,7 @@
   </action>
   <action name="actionOpen">
    <property name="icon">
-    <iconset resource="resources/res.qrc">
+    <iconset>
      <normaloff>:/icons/folder.png</normaloff>
      <disabledoff>:/icons/folder_dark_dis.png</disabledoff>:/icons/folder.png</iconset>
    </property>
@@ -267,7 +263,7 @@
   </action>
   <action name="actionSave">
    <property name="icon">
-    <iconset resource="resources/res.qrc">
+    <iconset>
      <normaloff>:/icons/disk.png</normaloff>
      <disabledoff>:/icons/save_dark_dis.png</disabledoff>:/icons/disk.png</iconset>
    </property>
@@ -284,8 +280,6 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
- <resources>
-  <include location="resources/res.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>
