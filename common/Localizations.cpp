@@ -34,7 +34,7 @@
 Localizations::Localizations()
 	: m_width(0), m_height(0), m_pixelSize(1.f), m_minZ(0.f), m_maxZ(0.f), m_channels(1), m_dData(nullptr), m_dSize(0)
 {
-	static_assert(sizeof(Localization) == 32);
+	static_assert(sizeof(Localization) == 40);
 }
 
 Localizations::~Localizations()
@@ -131,6 +131,8 @@ void Localizations::load(const std::string &fileName, std::function<void (uint32
 			l.PAz = spot.has_z_precision() ? spot.z_precision() : 75.f;
 			l.channel = spot.has_channel() ? spot.channel() : -1;
 			l.frame = spot.has_frame() ? spot.frame() : 0;
+			l.intensity = spot.has_intensity() ? spot.intensity() : 500.f;
+			l.background = spot.has_background() ? spot.background() : 100.f;
 
 			if (spot.location_units() == TSF::UM) {
 				l.x *= 1000.f;
@@ -153,6 +155,16 @@ void Localizations::load(const std::string &fileName, std::function<void (uint32
 
 
 	stream.close();
+}
+
+void Localizations::copyMetaDataFrom(const Localizations &other)
+{
+	m_width = other.m_width;
+	m_height = other.m_height;
+	m_pixelSize = other.m_pixelSize;
+	m_minZ = other.m_minZ;
+	m_maxZ = other.m_maxZ;
+	m_channels = other.m_channels;
 }
 
 bool Localizations::copyTo(DeviceType device)

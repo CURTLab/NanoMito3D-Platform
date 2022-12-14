@@ -59,7 +59,105 @@ void Correction::load(const QString &fileName, bool threaded)
 		func();
 }
 
+void Correction::correct(QImage labeling, float renderSize, QVector<QColor> labelColors, int channel, bool threaded)
+{
+	auto func = [this,labeling,renderSize,labelColors,channel]() {
+		m_corrected.clear();
+		m_corrected.copyMetaDataFrom(m_locs);
+
+		std::vector<Features> features;
+		std::vector<int> trainLabel;
+		Features f;
+
+		// check if featureSize is the same size as struct Features
+		const int featureSize = 6;
+		static_assert(sizeof(Features) == featureSize * sizeof(float));
+		static_assert(sizeof(featureNames) == featureSize * sizeof(char*));
+
+		int hist[2] = {0};
+		for (const auto &l : m_locs) {
+			if (l.channel != channel)
+				continue;
+
+			// extract color from labeling image
+			QPoint pos(l.x/renderSize, l.y/renderSize);
+			QColor c = labeling.pixelColor(pos);
+
+			// seach for label color
+			int target = -1;
+			for (int i = 0; i < labelColors.size(); ++i) {
+				if (c == labelColors[i]) {
+					target = i;
+					break;
+				}
+			}
+
+			// skip unlabeled localizations
+			if (target == -1)
+				continue;
+
+			hist[target]++;
+
+			extractFeatures(l, f);
+
+			features.push_back(f);
+			trainLabel.push_back(target);
+		}
+
+		cv::Ptr<cv::ml::RTrees> dtree;
+		try {
+			cv::Mat trainData(static_cast<int>(features.size()), featureSize, CV_32F, features.data());
+
+			dtree = cv::ml::RTrees::create();
+			//dtree->setMaxDepth(18);
+			dtree->setCalculateVarImportance(true);
+			if (!dtree->train(trainData, cv::ml::ROW_SAMPLE, cv::Mat(trainLabel, false))) {
+				emit error(tr("Correction error"), "Training failed!");
+				return;
+			}
+
+			cv::Mat importance = dtree->getVarImportance();
+			for (int i = 0; i < importance.rows; ++i)
+				qDebug().nospace() << i << ": " << featureNames[i] << ": " << importance.at<float>(i, 0);
+
+			cv::Mat result;
+			for (const auto &l : m_locs) {
+				if (l.channel == channel) {
+					extractFeatures(l, f);
+					dtree->predict(cv::Mat(1, featureSize, CV_32F, &f), result, 0);
+
+					if (qRound(result.at<float>(0, 0)) != 1)
+						continue;
+				}
+				m_corrected.push_back(l);
+			}
+			qDebug() << m_locs.size() << m_corrected.size();
+		} catch(std::exception &e) {
+			qCritical().nospace() << tr("Correction::load Error: ") + e.what();
+			emit error(tr("Correction error"), e.what());
+			return;
+		}
+
+		emit correctionFinished();
+	};
+
+	if (threaded)
+		QThreadPool::globalInstance()->start(func);
+	else
+		func();
+}
+
 int Correction::availableChannels() const
 {
 	return m_locs.channels();
+}
+
+void Correction::extractFeatures(const Localization &l, Features &f) const
+{
+	f.frame = l.frame;
+	f.PAx = l.PAx;
+	f.PAy = l.PAy;
+	f.PAz = l.PAz;
+	f.intensity = l.intensity;
+	f.background = l.background;
 }

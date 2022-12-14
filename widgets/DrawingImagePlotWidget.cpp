@@ -33,8 +33,8 @@
 class PaintCanvasItem : public QwtPlotItem
 {
 public:
-	PaintCanvasItem(int width, int height)
-		: canvasSize(width, height)
+	PaintCanvasItem(QSize size)
+		: canvasSize(size)
 	{
 		setZ(10);
 		setItemInterest(ScaleInterest, true);
@@ -140,12 +140,16 @@ void DrawingImagePlotWidget::setPaintToolColor(QColor color)
 
 void DrawingImagePlotWidget::setImage(const cv::Mat &image)
 {
-	if (m_paintCanvas == nullptr || m_paintCanvas->canvasSize.width() != image.rows || m_paintCanvas->canvasSize.height() != image.cols) {
+	if (image.empty())
+		return;
+
+	const QSize size(image.rows, image.cols);
+	if (m_paintCanvas == nullptr || m_paintCanvas->canvasSize != size) {
 		if (m_paintCanvas != nullptr) {
 			m_paintCanvas->detach();
 			delete m_paintCanvas;
 		}
-		m_paintCanvas = new PaintCanvasItem(image.rows, image.cols);
+		m_paintCanvas = new PaintCanvasItem(size);
 		m_paintCanvas->attach((QwtPlot*)plot());
 	}
 

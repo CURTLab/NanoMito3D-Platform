@@ -50,7 +50,7 @@ MainWindow::MainWindow(QWidget *parent)
 			  );
 
 	QPixmap pix(18, 18);
-	pix.fill(Qt::green);
+	pix.fill(m_labelColors[0]);
 
 	QTreeWidgetItem *item = new QTreeWidgetItem;
 	item->setIcon(0, QIcon(pix));
@@ -59,13 +59,13 @@ MainWindow::MainWindow(QWidget *parent)
 	m_ui->treeLabels->addTopLevelItem(item);
 	m_ui->treeLabels->setCurrentItem(item);
 
-	pix.fill(Qt::blue);
+	pix.fill(m_labelColors[1]);
 	item = new QTreeWidgetItem;
 	item->setIcon(0, QIcon(pix));
 	item->setText(0, tr("Correct Signal"));
 	m_ui->treeLabels->addTopLevelItem(item);
 
-	m_ui->preview->setPaintToolColor(Qt::green);
+	m_ui->preview->setPaintToolColor(m_labelColors[0]);
 	m_ui->preview->setPaintToolWidth(25);
 
 	m_ui->treeLabels->resizeColumnToContents(0);
@@ -80,15 +80,16 @@ MainWindow::MainWindow(QWidget *parent)
 	connect(m_ui->comboMode,  qOverload<int>(&QComboBox::currentIndexChanged),
 			  this, [this](int index) {
 		if (index == 0) {
-			m_ui->preview->setPaintToolColor(Qt::transparent);
-		} else {
 			m_ui->preview->setPaintToolColor(m_ui->treeLabels->currentItem()->icon(0).pixmap(1).toImage().pixelColor(0,0));
+		} else if (index == 1) {
+			m_ui->preview->setPaintToolColor(Qt::transparent);
 		}
 	});
 
 	setWindowTitle("Bleed-Through Correction");
 
 	m_ui->buttonRender->setEnabled(false);
+	m_ui->buttonCorrect->setEnabled(false);
 
 	connect(m_ui->buttonSelectFile, &QAbstractButton::clicked,
 			  this, [this]() {
@@ -114,6 +115,7 @@ MainWindow::MainWindow(QWidget *parent)
 			  });
 
 	connect(&m_correction, &Correction::localizationsLoaded, this, [this]() {
+		m_bar->setVisible(false);
 		m_ui->editFile->setText(m_correction.fileName());
 		m_ui->statusbar->showMessage(tr("Loaded %1 localizations form %2 successfully!")
 											  .arg(m_correction.localizations().size())
@@ -132,13 +134,31 @@ MainWindow::MainWindow(QWidget *parent)
 
 	connect(m_ui->buttonRender, &QAbstractButton::clicked,
 			  this, [this]() {
-		const int channel = m_ui->comboChannel->currentIndex() + 1;
+		m_renderSize = m_ui->spinRenderSize->value();
+		m_currentChannel = m_ui->comboChannel->currentIndex() + 1;
 		cv::Mat image;
-		Rendering::histogram2D(m_correction.localizations(), image, m_ui->spinRenderSize->value(), [channel](int, const Localization &l) {
-			return (l.PAx > 75.f || l.PAy > 75.f || l.channel != channel);
+		Rendering::histogram2D(m_correction.localizations(), image, m_renderSize, [this](int, const Localization &l) {
+			return (l.PAx > 75.f || l.PAy > 75.f || l.channel != m_currentChannel);
 		});
 		m_ui->preview->setImage(image);
+		m_ui->buttonCorrect->setEnabled(true);
 	});
+
+	connect(m_ui->buttonCorrect, &QAbstractButton::clicked,
+			  this, [this]() {
+		m_ui->frame->setEnabled(false);
+		m_correction.correct(m_ui->preview->paintOverlay(), m_renderSize, m_labelColors, m_currentChannel);
+	});
+
+	connect(&m_correction, &Correction::correctionFinished, this, [this]() {
+		cv::Mat image;
+		Rendering::histogram2D(m_correction.correctedLocalizations(), image, m_renderSize, [this](int, const Localization &l) {
+			return (l.PAx > 75.f || l.PAy > 75.f || l.channel != m_currentChannel);
+		});
+		m_ui->preview->setImage(image);
+		m_ui->frame->setEnabled(true);
+	});
+
 }
 
 MainWindow::~MainWindow()

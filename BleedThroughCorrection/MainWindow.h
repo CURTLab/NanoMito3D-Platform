@@ -44,6 +44,9 @@ private:
 	Ui::MainWindow *m_ui;
 	QProgressBar *m_bar;
 	Correction m_correction;
+	QVector<QColor> m_labelColors = {Qt::green, Qt::blue};
+	float m_renderSize;
+	int m_currentChannel;
 
 };
 #endif // MAINWINDOW_H

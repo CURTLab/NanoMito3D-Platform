@@ -24,6 +24,9 @@
 #define CORRECTION_H
 
 #include <QObject>
+#include <QImage>
+
+#include <opencv2/ml.hpp>
 
 #include "Localizations.h"
 
@@ -36,21 +39,36 @@ public:
 	// load localization file synchron or asynchron (threaded)
 	void load(const QString &fileName, bool threaded = true);
 
+	void correct(QImage labeling, float renderSize, QVector<QColor> labelColors, int channel, bool threaded = true);
+
 	int availableChannels() const;
 
 	inline constexpr const QString &fileName() const { return m_fileName; }
 	inline constexpr const Localizations &localizations() const { return m_locs; }
+	inline constexpr const Localizations &correctedLocalizations() const { return m_corrected; }
 
 signals:
 	void localizationsLoaded();
+	void correctionFinished();
 
 	void error(QString title, QString errorMessage);
 	void progressRangeChanged(int min, int max);
 	void progressChanged(int value);
 
 private:
+	struct Features {
+		float frame;
+		float intensity;
+		float background;
+		float PAx, PAy, PAz;
+	};
+	static constexpr const char *featureNames[] = {"Frame", "Intensity", "Background", "PAX", "PAY", "PAZ"};
+
+	void extractFeatures(const Localization &l, Features &f) const;
+
 	QString m_fileName;
 	Localizations m_locs;
+	Localizations m_corrected;
 
 };
 

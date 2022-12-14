@@ -31,8 +31,10 @@
 
 struct Localization
 {
-	float x, y, z;
 	uint32_t frame;
+	float x, y, z;
+	float intensity;
+	float background;
 	float PAx, PAy, PAz;
 	int32_t channel;
 
@@ -59,6 +61,8 @@ public:
 	}
 
 	inline constexpr int channels() const { return m_channels; };
+
+	void copyMetaDataFrom(const Localizations &other);
 
 	bool copyTo(DeviceType device);
 	const Localization *constData(DeviceType device) const;
