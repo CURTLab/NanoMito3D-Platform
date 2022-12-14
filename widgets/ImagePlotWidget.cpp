@@ -244,7 +244,12 @@ ImagePlotWidget::ImagePlotWidget(QWidget *parent)
 	layout->setObjectName("layer_plot");
 	layout->setContentsMargins(0, 0, 0, 0);
 	setLayout(layout);
-	layout->addWidget(m_d.get());
+	layout->addWidget(m_d);
+}
+
+ImagePlotWidget::~ImagePlotWidget()
+{
+	delete m_d;
 }
 
 void ImagePlotWidget::setImage(const cv::Mat &image)
@@ -276,6 +281,33 @@ void ImagePlotWidget::setImage(const cv::Mat &image)
 	d->rescaler->setIntervalHint(QwtPlot::yRight, intensity);
 	d->rescaler->rescale();
 
+	d->spectrogram->invalidateCache();
+	d->replot();
+}
+
+void ImagePlotWidget::setColorMap(ColorMap cmap)
+{
+	Q_D(ImagePlotWidget);
+	QwtLinearColorMap *cm = nullptr;
+	switch(cmap) {
+	case ColorMap::Gray:
+		cm = new QwtLinearColorMap(Qt::black, Qt::white);
+		break;
+	case ColorMap::Hot:
+		cm = new QwtLinearColorMap(Qt::black, Qt::white);
+		cm->addColorStop(0.4, QColor(255, 0, 0));
+		cm->addColorStop(0.8, QColor(255, 255, 0));
+		break;
+	}
+
+	d->spectrogram->setColorMap(cm);
+	d->spectrogram->invalidateCache();
+	d->replot();
+}
+
+void ImagePlotWidget::replot()
+{
+	Q_D(ImagePlotWidget);
 	d->spectrogram->invalidateCache();
 	d->replot();
 }
@@ -321,4 +353,10 @@ void ImagePlotWidget::addCircles(const QVector<QPointF> &dataPoints, QColor colo
 	item->attach(d);
 
 	d->replot();
+}
+
+void *ImagePlotWidget::plot()
+{
+	Q_D(ImagePlotWidget);
+	return d;
 }

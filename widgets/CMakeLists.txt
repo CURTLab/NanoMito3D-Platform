@@ -16,6 +16,7 @@ find_package(Qwt REQUIRED)
 set (PROJECT_SOURCES
     ImagePlotWidget.h ImagePlotWidget.cpp
     MatPlotWidget.h MatPlotWidget.cpp
+    DrawingImagePlotWidget.h DrawingImagePlotWidget.cpp
 )
 
 add_library(Widgets STATIC ${PROJECT_SOURCES})

@@ -19,36 +19,32 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ****************************************************************************/
+#ifndef DRAWINGIMAGEPLOTWIDGET_H
+#define DRAWINGIMAGEPLOTWIDGET_H
 
-#ifndef DRAWINGPLOTWIDGET_H
-#define DRAWINGPLOTWIDGET_H
+#include "ImagePlotWidget.h"
 
-#include <QWidget>
-
-#include <opencv2/opencv.hpp>
-
-class DrawingPlotWidgetPrivate;
-
-class DrawingPlotWidget : public QWidget
+class DrawingImagePlotWidget : public ImagePlotWidget
 {
-	Q_OBJECT
 public:
-	explicit DrawingPlotWidget(QWidget *parent = nullptr);
-	~DrawingPlotWidget();
+	DrawingImagePlotWidget(QWidget *parent = nullptr);
 
 	QImage paintOverlay() const;
 	void setPaintOverlay(QImage image) const;
 	void clearOverlay();
 
-public slots:
-	void setImage(const cv::Mat &image);
-
 	void setPaintToolWidth(int width);
 	void setPaintToolColor(QColor color);
 
+	virtual void setImage(const cv::Mat &image) override;
+
 private:
-	DrawingPlotWidgetPrivate * const m_d;
+	class QwtPlotPicker *m_painter;
+	class PaintCanvasItem *m_paintCanvas;
+
+	int m_toolWidth;
+	QColor m_toolColor;
 
 };
 
-#endif // DRAWINGPLOTWIDGET_H
+#endif // DRAWINGIMAGEPLOTWIDGET_H

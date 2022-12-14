@@ -74,6 +74,7 @@ add_library(Common STATIC ${PROJECT_SOURCES})
 target_link_libraries(Common
     PRIVATE
         protobuf::libprotobuf
+        ${CUDA_LIBRARIES}
 )
 
 target_compile_definitions(Common PUBLIC $<$<CONFIG:DEBUG>:DEBUG>)

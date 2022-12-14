@@ -20,44 +20,20 @@
  *
  ****************************************************************************/
 
-#ifndef IMAGEPLOTWIDGET_H
-#define IMAGEPLOTWIDGET_H
+#ifndef RENDERING_H
+#define RENDERING_H
 
-#include <QWidget>
+#include <functional>
+
 #include <opencv2/opencv.hpp>
 
-class ImagePlotWidgetPrivate;
+#include "Localizations.h"
 
-enum class ColorMap
+namespace Rendering
 {
-	Gray,
-	Hot
-};
 
-class ImagePlotWidget : public QWidget
-{
-	Q_DECLARE_PRIVATE_D(m_d, ImagePlotWidget)
-public:
-	ImagePlotWidget(QWidget *parent = nullptr);
-	virtual ~ImagePlotWidget();
-
-	virtual void setImage(const cv::Mat &image);
-
-	void setColorMap(ColorMap cmap);
-
-	void replot();
-	void clear();
-	void clearAnnotation();
-
-	// annotation
-	void addCircles(const QVector<QPointF> &dataPoints, QColor color, qreal radius);
-
-protected:
-	void *plot();
-
-private:
-	ImagePlotWidgetPrivate* const m_d;
+void histogram2D(const Localizations &locs, cv::Mat &output, float renderSize, std::function<bool(int, const Localization &)> filter = [](int, const Localization &){ return false; });
 
 };
 
-#endif // IMAGEPLOTWIDGET_H
+#endif // RENDERING_H

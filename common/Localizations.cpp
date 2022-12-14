@@ -42,7 +42,7 @@ Localizations::~Localizations()
 	cudaFree(m_dData);
 }
 
-void Localizations::load(const std::string &fileName)
+void Localizations::load(const std::string &fileName, std::function<void (uint32_t, uint32_t, const Localization &)> cb)
 {
 	// TSF file format: https://github.com/nicost/TSFProto
 
@@ -144,6 +144,8 @@ void Localizations::load(const std::string &fileName)
 
 			m_minZ = std::min(m_minZ, l.z);
 			m_maxZ = std::max(m_maxZ, l.z);
+
+			cb(i, spots, l);
 
 			push_back(l);
 		}

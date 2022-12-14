@@ -87,7 +87,7 @@
         <item>
          <widget class="QGroupBox" name="groupDensityFilter">
           <property name="title">
-           <string>Density Filter</string>
+           <string>Density filter</string>
           </property>
           <property name="checkable">
            <bool>true</bool>
@@ -129,7 +129,7 @@
         <item>
          <widget class="QGroupBox" name="groupBox">
           <property name="title">
-           <string>Render Settings</string>
+           <string>Render settings</string>
           </property>
           <layout class="QFormLayout" name="formLayout_2">
            <item row="0" column="0">
@@ -283,7 +283,7 @@
         <item>
          <widget class="QGroupBox" name="groupBox_3">
           <property name="title">
-           <string>Mitochondria analyzis:</string>
+           <string>Mitochondria analyzis</string>
           </property>
           <layout class="QFormLayout" name="formLayout_3">
            <item row="0" column="0">

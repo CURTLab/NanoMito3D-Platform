@@ -20,44 +20,38 @@
  *
  ****************************************************************************/
 
-#ifndef IMAGEPLOTWIDGET_H
-#define IMAGEPLOTWIDGET_H
+#ifndef CORRECTION_H
+#define CORRECTION_H
 
-#include <QWidget>
-#include <opencv2/opencv.hpp>
+#include <QObject>
 
-class ImagePlotWidgetPrivate;
+#include "Localizations.h"
 
-enum class ColorMap
+class Correction : public QObject
 {
-	Gray,
-	Hot
-};
-
-class ImagePlotWidget : public QWidget
-{
-	Q_DECLARE_PRIVATE_D(m_d, ImagePlotWidget)
+	Q_OBJECT
 public:
-	ImagePlotWidget(QWidget *parent = nullptr);
-	virtual ~ImagePlotWidget();
+	explicit Correction(QObject *parent = nullptr);
 
-	virtual void setImage(const cv::Mat &image);
+	// load localization file synchron or asynchron (threaded)
+	void load(const QString &fileName, bool threaded = true);
 
-	void setColorMap(ColorMap cmap);
+	int availableChannels() const;
 
-	void replot();
-	void clear();
-	void clearAnnotation();
+	inline constexpr const QString &fileName() const { return m_fileName; }
+	inline constexpr const Localizations &localizations() const { return m_locs; }
 
-	// annotation
-	void addCircles(const QVector<QPointF> &dataPoints, QColor color, qreal radius);
+signals:
+	void localizationsLoaded();
 
-protected:
-	void *plot();
+	void error(QString title, QString errorMessage);
+	void progressRangeChanged(int min, int max);
+	void progressChanged(int value);
 
 private:
-	ImagePlotWidgetPrivate* const m_d;
+	QString m_fileName;
+	Localizations m_locs;
 
 };
 
-#endif // IMAGEPLOTWIDGET_H
+#endif // CORRECTION_H

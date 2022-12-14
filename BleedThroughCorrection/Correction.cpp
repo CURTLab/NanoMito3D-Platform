@@ -20,44 +20,46 @@
  *
  ****************************************************************************/
 
-#ifndef IMAGEPLOTWIDGET_H
-#define IMAGEPLOTWIDGET_H
+#include "Correction.h"
 
-#include <QWidget>
-#include <opencv2/opencv.hpp>
+#include <QThreadPool>
+#include <QDebug>
 
-class ImagePlotWidgetPrivate;
-
-enum class ColorMap
+Correction::Correction(QObject *parent)
+	: QObject{parent}
 {
-	Gray,
-	Hot
-};
 
-class ImagePlotWidget : public QWidget
+}
+
+void Correction::load(const QString &fileName, bool threaded)
 {
-	Q_DECLARE_PRIVATE_D(m_d, ImagePlotWidget)
-public:
-	ImagePlotWidget(QWidget *parent = nullptr);
-	virtual ~ImagePlotWidget();
+	auto func = [this,fileName]() {
+		try {
+			uint32_t nLocs = 0;
+			m_locs.load(fileName.toStdString(), [this,&nLocs](uint32_t i, uint32_t n, const Localization &) {
+				if (nLocs != n) {
+					nLocs = n;
+					emit progressRangeChanged(0, static_cast<int>(n)-1);
+				}
+				if (i % 100 == 1)
+					emit progressChanged(i);
+			});
+			emit progressChanged(static_cast<int>(nLocs)-1);
+			m_fileName = fileName;
+			emit localizationsLoaded();
+		} catch(std::exception &e) {
+			qCritical().nospace() << tr("Correction::load Error: ") + e.what();
+			emit error(tr("Load localizations error"), e.what());
+		}
+	};
 
-	virtual void setImage(const cv::Mat &image);
+	if (threaded)
+		QThreadPool::globalInstance()->start(func);
+	else
+		func();
+}
 
-	void setColorMap(ColorMap cmap);
-
-	void replot();
-	void clear();
-	void clearAnnotation();
-
-	// annotation
-	void addCircles(const QVector<QPointF> &dataPoints, QColor color, qreal radius);
-
-protected:
-	void *plot();
-
-private:
-	ImagePlotWidgetPrivate* const m_d;
-
-};
-
-#endif // IMAGEPLOTWIDGET_H
+int Correction::availableChannels() const
+{
+	return m_locs.channels();
+}

@@ -24,7 +24,9 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <opencv2/ml.hpp>
+#include <QProgressBar>
+
+#include "Correction.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -40,8 +42,8 @@ public:
 
 private:
 	Ui::MainWindow *m_ui;
-
-	cv::Ptr<cv::ml::RTrees> m_dtree;
+	QProgressBar *m_bar;
+	Correction m_correction;
 
 };
 #endif // MAINWINDOW_H

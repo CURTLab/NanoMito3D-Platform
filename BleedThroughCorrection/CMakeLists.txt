@@ -11,23 +11,22 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
-
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 find_package(OpenCV REQUIRED)
-find_package(Qwt REQUIRED)
 
 set(PROJECT_SOURCES
     main.cpp
+    Correction.h Correction.cpp
     MainWindow.cpp MainWindow.h MainWindow.ui
-    DrawingPlotWidget.cpp DrawingPlotWidget.h
+    Rendering.h Rendering.cpp
     resources/res.qrc
 )
 
-include_directories("../common")
+include_directories("../common" "../widgets")
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../common ${CMAKE_CURRENT_BINARY_DIR}/common)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../widgets ${CMAKE_CURRENT_BINARY_DIR}/widgets)
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(${CMAKE_PROJECT_NAME}
@@ -43,9 +42,9 @@ endif()
 target_link_libraries(${CMAKE_PROJECT_NAME}
     PRIVATE
         Qt${QT_VERSION_MAJOR}::Widgets
-        Qwt::Qwt
         ${OpenCV_LIBS}
         Common
+        Widgets
 )
 
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE "DEV_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/..\"")
