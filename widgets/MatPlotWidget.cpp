@@ -235,6 +235,7 @@ void MatPlotWidget::hist(const QVector<double> &values, double min, double max, 
 	}
 
 	QwtPlotHistogram *hp = new QwtPlotHistogram();
+	hp->setRenderHint(QwtPlotItem::RenderAntialiased, true);
 	hp->setBrush(QColor(53,42,134));
 	hp->setPen(QPen(QColor(0,0,0), 1.0));
 	hp->setSamples(samples);
@@ -249,7 +250,8 @@ void MatPlotWidget::bar(const QStringList &values, const QVector<double> &height
 
 	QwtPlotBarChart *chart = new MatPlotColorChartItem(colors);
 
-	chart->setLayoutPolicy( QwtPlotBarChart::AutoAdjustSamples );
+	chart->setLayoutPolicy(QwtPlotBarChart::AutoAdjustSamples);
+	chart->setRenderHint(QwtPlotItem::RenderAntialiased, true);
 	chart->setSpacing(20);
 	chart->setMargin(3);
 	chart->setSamples(height);
@@ -366,6 +368,7 @@ void MatPlotWidget::addText(const QPointF &postion, const QString &text, QColor 
 	item->setXValue(postion.x());
 	item->setYValue(postion.y());
 	item->setLabelAlignment(alignment);
+	item->setRenderHint(QwtPlotItem::RenderAntialiased, true);
 	item->attach(d);
 
 	d->replot();
@@ -381,6 +384,7 @@ void MatPlotWidget::addVLine(qreal position, QColor color, qreal width)
 	marker->setXValue(position);
 	marker->setLineStyle(QwtPlotMarker::VLine);
 	marker->setLinePen(QPen(color,width));
+	marker->setRenderHint(QwtPlotItem::RenderAntialiased, true);
 
 	marker->attach(d);
 
