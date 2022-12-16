@@ -47,7 +47,7 @@ public:
 	Localizations();
 	~Localizations();
 
-	void load(const std::string &fileName, std::function<void(uint32_t,uint32_t,const Localization &)> cb = {});
+	void load(const std::string &fileName, std::function<void(uint32_t,uint32_t,const Localization &)> cb);
 
 	inline constexpr float width() const { return m_width * m_pixelSize; }
 	inline constexpr float height() const { return m_height * m_pixelSize; }

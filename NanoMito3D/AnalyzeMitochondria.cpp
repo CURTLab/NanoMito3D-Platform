@@ -49,7 +49,16 @@ void AnalyzeMitochondria::load(const QString &fileName, bool threaded)
 {
 	auto func = [this,fileName]() {
 		try {
-			m_locs.load(fileName.toStdString());
+			uint32_t locs = 0;
+			m_locs.load(fileName.toStdString(), [this,&locs](uint32_t i, uint32_t n,const Localization &l) {
+				if (locs != n) {
+					locs = n;
+					emit progressRangeChanged(0, static_cast<int>(locs)-1);
+				}
+				if (i % 1000 == 1)
+					emit progressChanged(i);
+			});
+			emit progressChanged(static_cast<int>(locs)-1);
 			m_fileName = fileName;
 			emit localizationsLoaded();
 		} catch(std::exception &e) {

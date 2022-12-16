@@ -91,6 +91,7 @@ MainWindow::MainWindow(QWidget *parent)
 		if (!fileName.isEmpty()) {
 			m_ui->statusbar->showMessage(tr("Load %1").arg(QFileInfo(fileName).fileName()));
 			m_ui->frame->setEnabled(false);
+			m_bar->setVisible(true);
 			m_analyis.load(fileName);
 		}
 	});
@@ -101,6 +102,7 @@ MainWindow::MainWindow(QWidget *parent)
 			  });
 
 	connect(&m_analyis, &AnalyzeMitochondria::localizationsLoaded, this, [this]() {
+		m_bar->setVisible(false);
 		m_ui->buttonRender->setEnabled(true);
 		m_ui->buttonAnalyse->setEnabled(false);
 		m_ui->editFile->setText(m_analyis.fileName());
