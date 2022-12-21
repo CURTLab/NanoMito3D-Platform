@@ -25,6 +25,7 @@
 
 #include <QMainWindow>
 #include <QProgressBar>
+#include <QLineEdit>
 
 #include "Correction.h"
 
@@ -41,6 +42,8 @@ public:
 	~MainWindow();
 
 private:
+	void openFileDialog(QLineEdit *edit, const QString &caption, const QString &filter);
+
 	Ui::MainWindow *m_ui;
 	QProgressBar *m_bar;
 	Correction m_correction;

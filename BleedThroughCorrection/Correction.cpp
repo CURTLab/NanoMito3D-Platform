@@ -24,11 +24,16 @@
 
 #include <QThreadPool>
 #include <QDebug>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+
+#include <opencv2/imgcodecs.hpp>
 
 Correction::Correction(QObject *parent)
-	: QObject{parent}
+	: QObject(parent)
 {
-
 }
 
 void Correction::load(const QString &fileName, bool threaded)
@@ -59,6 +64,159 @@ void Correction::load(const QString &fileName, bool threaded)
 		func();
 }
 
+void Correction::loadRawImageFromSingleStack(const QString &registrationPath, const QString &stackPath, bool threaded)
+{
+	auto func = [this,registrationPath,stackPath]() {
+		QFile file(registrationPath);
+		if (!file.open(QIODevice::ReadOnly)) {
+			emit error(tr("Load registration error"), tr("Could not open registration file!"));
+			return;
+		}
+		QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+		file.close();
+
+		std::array<cv::Rect,CHANNELS> rois;
+
+		for (const auto &roi : doc.object()["roi"].toArray()) {
+			QJsonObject values = roi.toObject();
+			if (!values.isEmpty()
+				 && values.contains("offset")
+				 && values.contains("size")
+				 && values.contains("channel"))
+			{
+				const int channel = values["channel"].toInt();
+				if (channel >= CHANNELS) {
+					qWarning() << "Load registration: Only two color channels are supported!";
+					continue;
+				}
+
+				QJsonObject offset = values.value("offset").toObject();
+				QJsonObject size = values.value("size").toObject();
+				if (!offset.isEmpty()
+					 && offset.contains("x")
+					 && offset.contains("y")
+					 && !size.isEmpty()
+					 && size.contains("width")
+					 && size.contains("height"))
+				{
+					rois[channel].x = offset.value("x").toInt();
+					rois[channel].y = offset.value("y").toInt();
+					rois[channel].width = size.value("width").toInt();
+					rois[channel].height = size.value("height").toInt();
+				}
+			}
+		}
+
+		// check ROIs
+		for (int i = 0; i < CHANNELS; ++i) {
+			if ((rois[i].width <= 0) || (rois[i].height <= 0)) {
+				emit error(tr("Load registration error"), tr("ROI of channel %1 could not been loaded!").arg(i+1));
+				return;
+			}
+			if ((i > 0) && ((rois[0].width != rois[i].width) || (rois[0].height != rois[i].height))) {
+				emit error(tr("Load registration error"), tr("Loaded ROIs are not the same size!"));
+				return;
+			}
+		}
+
+
+		try {
+			// load raw image stack
+			const auto numFrames = cv::imcount(stackPath.toStdString(), cv::IMREAD_UNCHANGED);
+
+			emit progressRangeChanged(0, static_cast<int>(numFrames));
+			emit progressChanged(0);
+
+			std::vector<cv::Mat> stack;
+			cv::imreadmulti(stackPath.toStdString(), stack, 0, static_cast<int>(numFrames), cv::IMREAD_UNCHANGED);
+
+
+			for (int i = 0; i < CHANNELS; ++i)
+				m_rawImageStack[i].resize(numFrames);
+
+			// copy loaded frames into stacks as float32 cv::Mat
+			cv::Mat frame;
+			for (size_t j = 0; j < numFrames; ++j) {
+				//cv::transpose(stack[j], frame);
+				frame = stack[j];
+				for (int i = 0; i < CHANNELS; ++i) {
+					auto tmp = frame(rois[i]);
+					tmp.convertTo(m_rawImageStack[i][j], CV_32F);
+				}
+				progressChanged(static_cast<int>(j) + 1);
+			}
+		} catch(std::exception &e) {
+			qCritical().nospace() << tr("Correction load stacks Error: ") + e.what();
+			emit error(tr("Load stacks error"), e.what());
+		}
+
+		emit imageStacksLoaded();
+	};
+
+	if (threaded)
+		QThreadPool::globalInstance()->start(func);
+	else
+		func();
+}
+
+void Correction::loadTwoRawImageStacks(const QString &channel1Path, const QString &channel2Path, bool threaded)
+{
+	auto func = [this,channel1Path,channel2Path]() {
+		if (channel1Path.isEmpty()) {
+			emit error(tr("Load two stacks error"), tr("Could not load channel 1 image!"));
+			return;
+		}
+
+		if (channel2Path.isEmpty()) {
+			emit error(tr("Load two stacks error"), tr("Could not load channel 2 image!"));
+			return;
+		}
+
+		auto loadChannel = [this](int channel, const QString &fileName, int numFrames) {
+			if (channel >= CHANNELS) {
+				qWarning() << "Load stacks: Only two color channels are supported!";
+				return;
+			}
+
+			std::vector<cv::Mat> stack;
+			cv::imreadmulti(fileName.toStdString(), stack, 0, static_cast<int>(numFrames), cv::IMREAD_UNCHANGED);
+
+			m_rawImageStack[channel].resize(numFrames);
+			for (size_t i = 0; i < numFrames; ++i) {
+				stack[i].convertTo(m_rawImageStack[channel][i], CV_32F);
+				progressChanged(static_cast<int>(i) + channel * numFrames);
+			}
+		};
+
+		try {
+			// load raw image stack
+			const auto numFrames1 = cv::imcount(channel1Path.toStdString(), cv::IMREAD_UNCHANGED);
+			const auto numFrames2 = cv::imcount(channel2Path.toStdString(), cv::IMREAD_UNCHANGED);
+			const int numFrames = std::min(numFrames1, numFrames2);
+
+			if (numFrames <= 0) {
+				emit error(tr("Load two stacks error"), tr("Images are empty!"));
+				return;
+			}
+
+			emit progressRangeChanged(0, 2 * numFrames - 1);
+			loadChannel(0, channel1Path, numFrames);
+			loadChannel(1, channel2Path, numFrames);
+
+			emit imageStacksLoaded();
+		} catch(std::exception &e) {
+			qCritical().nospace() << tr("Load 2ch stacks Error: ") + e.what();
+			emit error(tr("Load stacks error"), e.what());
+		}
+
+	};
+
+	if (threaded)
+		QThreadPool::globalInstance()->start(func);
+	else
+		func();
+}
+
 void Correction::correct(QImage labeling, float renderSize, QVector<QColor> labelColors, int channel, bool threaded)
 {
 	auto func = [this,labeling,renderSize,labelColors,channel]() {
@@ -66,7 +224,7 @@ void Correction::correct(QImage labeling, float renderSize, QVector<QColor> labe
 		m_corrected.copyMetaDataFrom(m_locs);
 
 		std::vector<Features> features;
-		std::vector<int> trainLabel;
+		std::vector<int> labels;
 		Features f;
 
 		// check if featureSize is the same size as struct Features
@@ -101,17 +259,18 @@ void Correction::correct(QImage labeling, float renderSize, QVector<QColor> labe
 			extractFeatures(l, f);
 
 			features.push_back(f);
-			trainLabel.push_back(target);
+			labels.push_back(target);
 		}
 
 		cv::Ptr<cv::ml::RTrees> dtree;
 		try {
 			cv::Mat trainData(static_cast<int>(features.size()), featureSize, CV_32F, features.data());
+			cv::Mat trainLabel(labels, false);
 
 			dtree = cv::ml::RTrees::create();
 			//dtree->setMaxDepth(18);
 			dtree->setCalculateVarImportance(true);
-			if (!dtree->train(trainData, cv::ml::ROW_SAMPLE, cv::Mat(trainLabel, false))) {
+			if (!dtree->train(trainData, cv::ml::ROW_SAMPLE, trainLabel)) {
 				emit error(tr("Correction error"), "Training failed!");
 				return;
 			}
@@ -120,6 +279,22 @@ void Correction::correct(QImage labeling, float renderSize, QVector<QColor> labe
 			for (int i = 0; i < importance.rows; ++i)
 				qDebug().nospace() << i << ": " << featureNames[i] << ": " << importance.at<float>(i, 0);
 
+			// test accurary
+			cv::Mat test;
+			dtree->predict(trainData, test);
+
+			double hist1[2] = {0},  hist2[2] = {0};
+			double sum = 0;
+			for (int i = 0; i < trainLabel.rows; ++i) {
+				const int pred = qRound(test.at<float>(i, 0));
+				sum += (pred == labels[i]);
+				hist1[labels[i]] += 1.0;
+				hist2[pred] += 1.0;
+			}
+			sum /= trainLabel.rows;
+			qDebug().nospace() << "Accuracy: " << sum << "%" << ", value accurary: " << (hist2[1] / hist1[1]) << "%";
+
+			// filter image
 			cv::Mat result;
 			for (const auto &l : m_locs) {
 				if (l.channel == channel) {

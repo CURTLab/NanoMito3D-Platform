@@ -49,6 +49,10 @@ MainWindow::MainWindow(QWidget *parent)
 			  m_ui->preview,  &DrawingImagePlotWidget::setPaintToolWidth
 			  );
 
+	connect(m_ui->comboImageStack, qOverload<int>(&QComboBox::currentIndexChanged),
+			  m_ui->stackedWidget, &QStackedWidget::setCurrentIndex
+			  );
+
 	QPixmap pix(18, 18);
 	pix.fill(m_labelColors[0]);
 
@@ -94,7 +98,7 @@ MainWindow::MainWindow(QWidget *parent)
 	connect(m_ui->buttonSelectFile, &QAbstractButton::clicked,
 			  this, [this]() {
 		m_bar->setVisible(false);
-		QString fileName = QFileDialog::getOpenFileName(this, "Open localization file", DEV_PATH "/examples", "TSF File (*.tsf)");
+		QString fileName = QFileDialog::getOpenFileName(this, "Open localization file", DEV_PATH "/examples", "TSF file (*.tsf)");
 		if (!fileName.isEmpty()) {
 			m_ui->statusbar->showMessage(tr("Load %1").arg(QFileInfo(fileName).fileName()));
 			m_ui->frame->setEnabled(false);
@@ -102,6 +106,19 @@ MainWindow::MainWindow(QWidget *parent)
 			m_correction.load(fileName);
 		}
 	});
+
+	connect(m_ui->buttonOpenRegistration, &QAbstractButton::clicked,
+			  this, [this]() { openFileDialog(m_ui->editRegistrationPath, tr("Open registration file"), tr("JSON file (*.json)")); }
+	);
+	connect(m_ui->buttonOpenSingleImage, &QAbstractButton::clicked,
+			  this, [this]() { openFileDialog(m_ui->editSingleImagePath, tr("Open raw image stack"), tr("TIF file (*.tif *.tiff)")); }
+	);
+	connect(m_ui->buttonOpenImageCh1, &QAbstractButton::clicked,
+			  this, [this]() { openFileDialog(m_ui->editImagePathCh1, tr("Open raw image stack of channel 1"), tr("TIF file (*.tif *.tiff)")); }
+	);
+	connect(m_ui->buttonOpenImageCh2, &QAbstractButton::clicked,
+			  this, [this]() { openFileDialog(m_ui->editImagePathCh2, tr("Open raw image stack of channel 2"), tr("TIF file (*.tif *.tiff)")); }
+	);
 
 	connect(&m_correction, &Correction::progressRangeChanged,
 			  m_bar, &QProgressBar::setRange);
@@ -132,8 +149,7 @@ MainWindow::MainWindow(QWidget *parent)
 		m_ui->frame->setEnabled(true);
 	});
 
-	connect(m_ui->buttonRender, &QAbstractButton::clicked,
-			  this, [this]() {
+	connect(m_ui->buttonRender, &QAbstractButton::clicked, this, [this]() {
 		m_renderSize = m_ui->spinRenderSize->value();
 		m_currentChannel = m_ui->comboChannel->currentIndex() + 1;
 		cv::Mat image;
@@ -144,8 +160,21 @@ MainWindow::MainWindow(QWidget *parent)
 		m_ui->buttonCorrect->setEnabled(true);
 	});
 
-	connect(m_ui->buttonCorrect, &QAbstractButton::clicked,
-			  this, [this]() {
+	connect(m_ui->buttonLoadStacks, &QAbstractButton::clicked, this, [this]() {
+		m_ui->frame->setEnabled(false);
+		m_bar->setVisible(true);
+		if (m_ui->comboImageStack->currentIndex() == 0)
+			m_correction.loadRawImageFromSingleStack(m_ui->editRegistrationPath->text(), m_ui->editSingleImagePath->text());
+		else if (m_ui->comboImageStack->currentIndex() == 1)
+			m_correction.loadTwoRawImageStacks(m_ui->editImagePathCh1->text(), m_ui->editImagePathCh1->text());
+	});
+
+	connect(&m_correction, &Correction::imageStacksLoaded, this, [this]() {
+		m_bar->setVisible(false);
+		m_ui->frame->setEnabled(true);
+	});
+
+	connect(m_ui->buttonCorrect, &QAbstractButton::clicked, this, [this]() {
 		m_ui->frame->setEnabled(false);
 		m_correction.correct(m_ui->preview->paintOverlay(), m_renderSize, m_labelColors, m_currentChannel);
 	});
@@ -163,4 +192,11 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
+}
+
+void MainWindow::openFileDialog(QLineEdit *edit, const QString &caption, const QString &filter)
+{
+	QString fileName = QFileDialog::getOpenFileName(this, caption, DEV_PATH "/examples", filter);
+	if (!fileName.isEmpty())
+		edit->setText(fileName);
 }

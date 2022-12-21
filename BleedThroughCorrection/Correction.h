@@ -39,6 +39,9 @@ public:
 	// load localization file synchron or asynchron (threaded)
 	void load(const QString &fileName, bool threaded = true);
 
+	void loadRawImageFromSingleStack(const QString &registrationPath, const QString &stackPath, bool threaded = true);
+	void loadTwoRawImageStacks(const QString &channel1Path, const QString &channel2Path, bool threaded = true);
+
 	void correct(QImage labeling, float renderSize, QVector<QColor> labelColors, int channel, bool threaded = true);
 
 	int availableChannels() const;
@@ -49,6 +52,7 @@ public:
 
 signals:
 	void localizationsLoaded();
+	void imageStacksLoaded();
 	void correctionFinished();
 
 	void error(QString title, QString errorMessage);
@@ -66,9 +70,12 @@ private:
 
 	void extractFeatures(const Localization &l, Features &f) const;
 
+	static constexpr int CHANNELS = 2;
+
 	QString m_fileName;
 	Localizations m_locs;
 	Localizations m_corrected;
+	std::vector<cv::Mat> m_rawImageStack[CHANNELS];
 
 };
 

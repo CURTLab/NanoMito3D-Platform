@@ -1,0 +1,26 @@
+{
+    "roi": [
+        {
+            "channel": 0,
+            "offset": {
+                "x": 2,
+                "y": 4
+            },
+            "size": {
+                "height": 250,
+                "width": 232
+            }
+        },
+        {
+            "channel": 1,
+            "offset": {
+                "x": 269,
+                "y": 3
+            },
+            "size": {
+                "height": 250,
+                "width": 232
+            }
+        }
+    ]
+}
