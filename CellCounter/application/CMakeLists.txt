@@ -56,7 +56,7 @@ set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
 
 add_custom_command(TARGET CellCounterApp POST_BUILD        # Adds a post-build event to MyTest
     COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
-        "${CMAKE_CURRENT_SOURCE_DIR}/../../examples/CellCounterModel.pb"      # <--this is in-file
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../examples/CellCounterModel.onnx"      # <--this is in-file
         $<TARGET_FILE_DIR:CellCounterApp>)                 # <--this is out-file path
 
 install(TARGETS ${CMAKE_PROJECT_NAME}

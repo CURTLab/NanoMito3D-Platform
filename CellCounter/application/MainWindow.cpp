@@ -43,7 +43,7 @@ MainWindow::MainWindow(QWidget *parent)
 	m_bar->setVisible(false);
 
 	try {
-		m_model.loadModel("CellCounterModel.pb");
+		m_model.loadModel("CellCounterModel.onnx");
 	} catch(std::exception &e) {
 		QMessageBox::critical(nullptr, tr("Error"), tr("Could not load dnn model! Reason: %1").arg(e.what()));
 		exit(-1);

@@ -33,7 +33,7 @@ CellCounter::CellCounter(QObject *parent)
 
 bool CellCounter::loadModel(QString model)
 {
-	m_model = cv::dnn::readNetFromTensorflow(model.toStdString());
+	m_model = cv::dnn::readNet(model.toStdString());
 	if (m_model.empty())
 		return false;
 	m_windowSize = 128;
