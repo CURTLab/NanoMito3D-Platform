@@ -28,11 +28,15 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QtMath>
+#include <QStandardPaths>
 
 #include <opencv2/imgcodecs.hpp>
 
 Correction::Correction(QObject *parent)
 	: QObject(parent)
+	, m_rawImageWidth(0)
+	, m_rawImageHeight(0)
 {
 }
 
@@ -66,6 +70,9 @@ void Correction::load(const QString &fileName, bool threaded)
 
 void Correction::loadRawImageFromSingleStack(const QString &registrationPath, const QString &stackPath, bool threaded)
 {
+	m_rawImageWidth = 0;
+	m_rawImageHeight = 0;
+
 	auto func = [this,registrationPath,stackPath]() {
 		QFile file(registrationPath);
 		if (!file.open(QIODevice::ReadOnly)) {
@@ -145,6 +152,10 @@ void Correction::loadRawImageFromSingleStack(const QString &registrationPath, co
 				}
 				progressChanged(static_cast<int>(j) + 1);
 			}
+
+			m_rawImageWidth = numFrames > 0 ? m_rawImageStack[0][0].rows : 0;
+			m_rawImageHeight = numFrames > 0 ? m_rawImageStack[0][0].cols : 0;
+
 		} catch(std::exception &e) {
 			qCritical().nospace() << tr("Correction load stacks Error: ") + e.what();
 			emit error(tr("Load stacks error"), e.what());
@@ -161,6 +172,9 @@ void Correction::loadRawImageFromSingleStack(const QString &registrationPath, co
 
 void Correction::loadTwoRawImageStacks(const QString &channel1Path, const QString &channel2Path, bool threaded)
 {
+	m_rawImageWidth = 0;
+	m_rawImageHeight = 0;
+
 	auto func = [this,channel1Path,channel2Path]() {
 		if (channel1Path.isEmpty()) {
 			emit error(tr("Load two stacks error"), tr("Could not load channel 1 image!"));
@@ -203,6 +217,10 @@ void Correction::loadTwoRawImageStacks(const QString &channel1Path, const QStrin
 			loadChannel(0, channel1Path, numFrames);
 			loadChannel(1, channel2Path, numFrames);
 
+
+			m_rawImageWidth = numFrames > 0 ? m_rawImageStack[0][0].rows : 0;
+			m_rawImageHeight = numFrames > 0 ? m_rawImageStack[0][0].cols : 0;
+
 			emit imageStacksLoaded();
 		} catch(std::exception &e) {
 			qCritical().nospace() << tr("Load 2ch stacks Error: ") + e.what();
@@ -217,88 +235,116 @@ void Correction::loadTwoRawImageStacks(const QString &channel1Path, const QStrin
 		func();
 }
 
-void Correction::correct(QImage labeling, float renderSize, QVector<QColor> labelColors, int channel, bool threaded)
+void Correction::correct(QImage labeling, float renderSize, QVector<QColor> labelColors, int channel, int iterations, bool threaded)
 {
-	auto func = [this,labeling,renderSize,labelColors,channel]() {
+	auto func = [this,labeling,renderSize,labelColors,channel,iterations]() {
 		m_corrected.clear();
 		m_corrected.copyMetaDataFrom(m_locs);
 
 		std::vector<Features> features;
 		std::vector<int> labels;
-		Features f;
+		Features f = {0};
+
+		const size_t numDefaultFearureNames = sizeof(featureNames)/sizeof(char*);
+
+		const bool hasStack = m_locs.numFrames() > 0 && m_rawImageStack[0].size() == m_locs.numFrames() && m_rawImageStack[1].size() == m_locs.numFrames();
 
 		// check if featureSize is the same size as struct Features
-		const int featureSize = 6;
+		const int featureSize = 5 + CHANNELS * 9;
 		static_assert(sizeof(Features) == featureSize * sizeof(float));
-		static_assert(sizeof(featureNames) == featureSize * sizeof(char*));
 
-		int hist[2] = {0};
-		for (const auto &l : m_locs) {
-			if (l.channel != channel)
-				continue;
+		const QRect imageRect(0, 0, labeling.width(), labeling.height());
 
-			// extract color from labeling image
-			QPoint pos(l.x/renderSize, l.y/renderSize);
-			QColor c = labeling.pixelColor(pos);
+		try {
+			int hist[2] = {0};
+			for (const auto &l : m_locs) {
+				if (l.channel != channel)
+					continue;
 
-			// seach for label color
-			int target = -1;
-			for (int i = 0; i < labelColors.size(); ++i) {
-				if (c == labelColors[i]) {
-					target = i;
-					break;
+				// extract color from labeling image
+				QPoint pos(l.x/renderSize, l.y/renderSize);
+				QColor c = labeling.pixelColor(pos);
+				if (!imageRect.contains(pos))
+					continue;
+
+				// seach for label color
+				int target = -1;
+				for (int i = 0; i < labelColors.size(); ++i) {
+					if (c == labelColors[i]) {
+						target = i;
+						break;
+					}
 				}
+
+				// skip unlabeled localizations
+				if (target == -1)
+					continue;
+
+				hist[target]++;
+
+				extractFeatures(l, f);
+				if (hasStack)
+					extractRawImageFeatures(l, f);
+
+				features.push_back(f);
+				labels.push_back(target);
 			}
 
-			// skip unlabeled localizations
-			if (target == -1)
-				continue;
-
-			hist[target]++;
-
-			extractFeatures(l, f);
-
-			features.push_back(f);
-			labels.push_back(target);
-		}
-
-		cv::Ptr<cv::ml::RTrees> dtree;
-		try {
 			cv::Mat trainData(static_cast<int>(features.size()), featureSize, CV_32F, features.data());
 			cv::Mat trainLabel(labels, false);
 
-			dtree = cv::ml::RTrees::create();
-			//dtree->setMaxDepth(18);
+			cv::Ptr<cv::ml::RTrees> dtree = cv::ml::RTrees::create();
 			dtree->setCalculateVarImportance(true);
-			if (!dtree->train(trainData, cv::ml::ROW_SAMPLE, trainLabel)) {
-				emit error(tr("Correction error"), "Training failed!");
-				return;
-			}
-
-			cv::Mat importance = dtree->getVarImportance();
-			for (int i = 0; i < importance.rows; ++i)
-				qDebug().nospace() << i << ": " << featureNames[i] << ": " << importance.at<float>(i, 0);
 
 			// test accurary
 			cv::Mat test;
-			dtree->predict(trainData, test);
+			cv::Mat importance;
 
-			double hist1[2] = {0},  hist2[2] = {0};
-			double sum = 0;
-			for (int i = 0; i < trainLabel.rows; ++i) {
-				const int pred = qRound(test.at<float>(i, 0));
-				sum += (pred == labels[i]);
-				hist1[labels[i]] += 1.0;
-				hist2[pred] += 1.0;
+			const QString tempPath = QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/model.json";
+			double best = 0.0;
+			for (int i = 0; i < iterations; ++i) {
+				if (!dtree->train(trainData, cv::ml::ROW_SAMPLE, trainLabel)) {
+					emit error(tr("Correction error"), tr("Training failed!"));
+					return;
+				}
+
+				dtree->predict(trainData, test);
+
+				double hist1[2] = {0},  hist2[2] = {0};
+				for (int i = 0; i < trainLabel.rows; ++i) {
+					const int pred = qRound(test.at<float>(i, 0));
+					hist1[labels[i]] += 1.0;
+					hist2[pred] += 1.0;
+				}
+
+				const double valAcc = (hist2[1] / hist1[1]);
+				if (valAcc > best) {
+					dtree->save(tempPath.toStdString());
+					best = valAcc;
+					importance = dtree->getVarImportance();
+				}
 			}
-			sum /= trainLabel.rows;
-			qDebug().nospace() << "Accuracy: " << sum << "%" << ", value accurary: " << (hist2[1] / hist1[1]) << "%";
+			dtree = cv::ml::RTrees::load(tempPath.toStdString());
+			// cleanup best temp model file
+			QFile(tempPath).remove();
+
+			qDebug().nospace() << "Value accuracy: " << best * 100. << "%";
+
+			for (int i = 0; i < importance.rows; ++i) {
+				if (i < numDefaultFearureNames)
+					qDebug().nospace() << i << ": " << featureNames[i] << ": " << importance.at<float>(i, 0);
+				else if (hasStack)
+					qDebug().nospace() << i << ": Ch" << (i-numDefaultFearureNames)/9 << "_" << (i-numDefaultFearureNames)%9 << ": " << importance.at<float>(i, 0);
+			}
 
 			// filter image
 			cv::Mat result;
 			for (const auto &l : m_locs) {
 				if (l.channel == channel) {
 					extractFeatures(l, f);
+					if (hasStack)
+						extractRawImageFeatures(l, f);
+
 					dtree->predict(cv::Mat(1, featureSize, CV_32F, &f), result, 0);
 
 					if (qRound(result.at<float>(0, 0)) != 1)
@@ -306,7 +352,9 @@ void Correction::correct(QImage labeling, float renderSize, QVector<QColor> labe
 				}
 				m_corrected.push_back(l);
 			}
-			qDebug() << m_locs.size() << m_corrected.size();
+
+			emit showMessage(tr("Filtered %1 localization with a training accuracy of %2\%").arg(m_locs.size()-m_corrected.size()).arg(best * 100.0, 0, 'f', 2));
+
 		} catch(std::exception &e) {
 			qCritical().nospace() << tr("Correction::load Error: ") + e.what();
 			emit error(tr("Correction error"), e.what());
@@ -329,10 +377,32 @@ int Correction::availableChannels() const
 
 void Correction::extractFeatures(const Localization &l, Features &f) const
 {
-	f.frame = l.frame;
 	f.PAx = l.PAx;
 	f.PAy = l.PAy;
 	f.PAz = l.PAz;
 	f.intensity = l.intensity;
 	f.background = l.background;
+}
+
+void Correction::extractRawImageFeatures(const Localization &l, Features &f) const
+{
+	const int x = qFloor(l.x / m_locs.pixelSize());
+	const int y = qFloor(l.y / m_locs.pixelSize());
+	// frame is one index
+	const size_t frame = l.frame-1;
+	if (x >= 1 && y >= 1 && x < m_rawImageWidth - 1 && y < m_rawImageHeight - 1) {
+		float *rawPtr = f.raw;
+		for (int i = 0; i < CHANNELS; ++i) {
+			const auto &img = m_rawImageStack[i][frame];
+			*rawPtr++ = img.at<float>(x - 1, y - 1);
+			*rawPtr++ = img.at<float>(x + 0, y - 1);
+			*rawPtr++ = img.at<float>(x + 1, y - 1);
+			*rawPtr++ = img.at<float>(x - 1, y + 0);
+			*rawPtr++ = img.at<float>(x + 0, y + 0);
+			*rawPtr++ = img.at<float>(x + 1, y + 0);
+			*rawPtr++ = img.at<float>(x - 1, y + 1);
+			*rawPtr++ = img.at<float>(x + 0, y + 1);
+			*rawPtr++ = img.at<float>(x + 1, y + 1);
+		}
+	}
 }

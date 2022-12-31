@@ -44,6 +44,7 @@ private:
 
 	int m_toolWidth;
 	QColor m_toolColor;
+	class QwtPlot *m_plot;
 
 };
 

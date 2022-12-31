@@ -31,6 +31,7 @@
 #include <opencv2/ml.hpp>
 
 #include "Rendering.h"
+#include "Version.h"
 
 MainWindow::MainWindow(QWidget *parent)
 	: QMainWindow(parent)
@@ -75,13 +76,17 @@ MainWindow::MainWindow(QWidget *parent)
 	m_ui->treeLabels->resizeColumnToContents(0);
 	m_ui->treeLabels->setRootIsDecorated(false);
 
+	connect(&m_correction, &Correction::showMessage,
+			  this, [this](QString msg) { m_ui->statusbar->showMessage(msg); }
+			  );
+
 	connect(m_ui->treeLabels, &QTreeWidget::currentItemChanged,
 			  [this](QTreeWidgetItem *current, QTreeWidgetItem *) {
 		if (m_ui->actionBrush->isChecked())
 			m_ui->preview->setPaintToolColor(current->icon(0).pixmap(1).toImage().pixelColor(0,0));
 	});
 
-	connect(m_ui->comboMode,  qOverload<int>(&QComboBox::currentIndexChanged),
+	connect(m_ui->comboMode, qOverload<int>(&QComboBox::currentIndexChanged),
 			  this, [this](int index) {
 		if (index == 0) {
 			m_ui->preview->setPaintToolColor(m_ui->treeLabels->currentItem()->icon(0).pixmap(1).toImage().pixelColor(0,0));
@@ -90,7 +95,7 @@ MainWindow::MainWindow(QWidget *parent)
 		}
 	});
 
-	setWindowTitle("Bleed-Through Correction");
+	setWindowTitle(tr("Bleed-Through Correction r%1").arg(GIT_REVISION));
 
 	m_ui->buttonRender->setEnabled(false);
 	m_ui->buttonCorrect->setEnabled(false);
@@ -176,7 +181,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 	connect(m_ui->buttonCorrect, &QAbstractButton::clicked, this, [this]() {
 		m_ui->frame->setEnabled(false);
-		m_correction.correct(m_ui->preview->paintOverlay(), m_renderSize, m_labelColors, m_currentChannel);
+		m_correction.correct(m_ui->preview->paintOverlay(), m_renderSize, m_labelColors, m_currentChannel, m_ui->spinIterations->value());
 	});
 
 	connect(&m_correction, &Correction::correctionFinished, this, [this]() {
@@ -186,6 +191,23 @@ MainWindow::MainWindow(QWidget *parent)
 		});
 		m_ui->preview->setImage(image);
 		m_ui->frame->setEnabled(true);
+	});
+
+
+	connect(m_ui->buttonLoadLabel, &QAbstractButton::clicked, this, [this]() {
+		QFileInfo fi(m_ui->editFile->text());
+		QString defaultFile = m_ui->editFile->text().isEmpty() ? "" : fi.absolutePath() + "/" + fi.baseName() + ".png";
+		QString fileName = QFileDialog::getOpenFileName(this, "Load label", defaultFile, "Image (*.png)");
+		if (!fileName.isEmpty())
+			m_ui->preview->setPaintOverlay(QImage(fileName));
+	});
+
+	connect(m_ui->buttonSaveLabel, &QAbstractButton::clicked, this, [this]() {
+		QFileInfo fi(m_ui->editFile->text());
+		QString defaultFile = m_ui->editFile->text().isEmpty() ? "" : fi.absolutePath() + "/" + fi.baseName() + ".png";
+		QString fileName = QFileDialog::getSaveFileName(this, "Save label", defaultFile, "Image (*.png)");
+		if (!fileName.isEmpty())
+			m_ui->preview->paintOverlay().save(fileName);
 	});
 
 }

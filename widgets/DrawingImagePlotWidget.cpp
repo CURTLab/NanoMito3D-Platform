@@ -71,19 +71,18 @@ DrawingImagePlotWidget::DrawingImagePlotWidget(QWidget *parent)
 	: ImagePlotWidget(parent)
 	, m_painter(nullptr)
 	, m_paintCanvas(nullptr)
+	, m_plot((QwtPlot*)(ImagePlotWidget::plot()))
 {
-	QwtPlot *plot = (QwtPlot*)(ImagePlotWidget::plot());
-
 	m_painter = new QwtPlotPicker(QwtPlot::xBottom, QwtPlot::yLeft,
 											QwtPicker::NoRubberBand, QwtPicker::AlwaysOff,
-											plot->canvas());
+											m_plot->canvas());
 	m_painter->setStateMachine(new QwtPickerDragPointMachine);
 	m_painter->setEnabled(true);
 
-	connect(m_painter, &QwtPlotPicker::moved, this, [this,plot](const QPointF &pos){
+	auto paint = [this](const QPointF &pos){
 		if (m_paintCanvas && m_painter->isEnabled()) {
-			const QwtScaleMap xMap = plot->canvasMap(QwtPlot::xBottom);
-			const QwtScaleMap yMap = plot->canvasMap(QwtPlot::yLeft);
+			const QwtScaleMap xMap = m_plot->canvasMap(QwtPlot::xBottom);
+			const QwtScaleMap yMap = m_plot->canvasMap(QwtPlot::yLeft);
 
 			double r1 = abs(xMap.invTransform(0.5*m_toolWidth) - xMap.invTransform(0.0));
 			double r2 = abs(yMap.invTransform(0.5*m_toolWidth) - yMap.invTransform(0.0));
@@ -94,9 +93,12 @@ DrawingImagePlotWidget::DrawingImagePlotWidget(QWidget *parent)
 			p.setPen(Qt::NoPen);
 			p.setBrush(m_toolColor);
 			p.drawEllipse(pos, r1, r2);
-			plot->replot();
+			m_plot->replot();
 		}
-	});
+	};
+
+	connect(m_painter, qOverload<const QPointF&>(&QwtPlotPicker::selected), this, paint);
+	connect(m_painter, &QwtPlotPicker::moved, this, paint);
 }
 
 QImage DrawingImagePlotWidget::paintOverlay() const
@@ -106,15 +108,17 @@ QImage DrawingImagePlotWidget::paintOverlay() const
 
 void DrawingImagePlotWidget::setPaintOverlay(QImage image) const
 {
-	if (m_paintCanvas && !image.isNull() && !m_paintCanvas->canvasSize.isNull())
+	if (m_paintCanvas && !image.isNull() && !m_paintCanvas->canvasSize.isNull()) {
 		m_paintCanvas->image = image.scaled(m_paintCanvas->canvasSize);
+		m_plot->replot();
+	}
 }
 
 void DrawingImagePlotWidget::clearOverlay()
 {
 	if (m_paintCanvas)
 		m_paintCanvas->image.fill(Qt::transparent);
-	((QwtPlot*)plot())->replot();
+	m_plot->replot();
 }
 
 void DrawingImagePlotWidget::setPaintToolWidth(int width)
@@ -130,7 +134,7 @@ void DrawingImagePlotWidget::setPaintToolWidth(int width)
 	p.setBrush(QColor(255, 255, 255, 100));
 	p.drawEllipse(0, 0, width, width);
 	p.end();
-	((QwtPlot*)plot())->canvas()->setCursor(QCursor(cursor, width / 2, width / 2));
+	m_plot->canvas()->setCursor(QCursor(cursor, width / 2, width / 2));
 }
 
 void DrawingImagePlotWidget::setPaintToolColor(QColor color)

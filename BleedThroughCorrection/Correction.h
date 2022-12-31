@@ -42,7 +42,7 @@ public:
 	void loadRawImageFromSingleStack(const QString &registrationPath, const QString &stackPath, bool threaded = true);
 	void loadTwoRawImageStacks(const QString &channel1Path, const QString &channel2Path, bool threaded = true);
 
-	void correct(QImage labeling, float renderSize, QVector<QColor> labelColors, int channel, bool threaded = true);
+	void correct(QImage labeling, float renderSize, QVector<QColor> labelColors, int channel, int iterations, bool threaded = true);
 
 	int availableChannels() const;
 
@@ -58,24 +58,28 @@ signals:
 	void error(QString title, QString errorMessage);
 	void progressRangeChanged(int min, int max);
 	void progressChanged(int value);
+	void showMessage(QString massage);
 
 private:
+	static constexpr int CHANNELS = 2;
+
 	struct Features {
-		float frame;
 		float intensity;
 		float background;
 		float PAx, PAy, PAz;
+		float raw[9 * CHANNELS];
 	};
-	static constexpr const char *featureNames[] = {"Frame", "Intensity", "Background", "PAX", "PAY", "PAZ"};
+	static constexpr const char *featureNames[] = {"Intensity", "Background", "PAX", "PAY", "PAZ"};
 
 	void extractFeatures(const Localization &l, Features &f) const;
-
-	static constexpr int CHANNELS = 2;
+	void extractRawImageFeatures(const Localization &l, Features &f) const;
 
 	QString m_fileName;
 	Localizations m_locs;
 	Localizations m_corrected;
 	std::vector<cv::Mat> m_rawImageStack[CHANNELS];
+	int m_rawImageWidth;
+	int m_rawImageHeight;
 
 };
 
