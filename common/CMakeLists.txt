@@ -8,7 +8,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Protobuf CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
-find_package(CUDA 7.0 REQUIRED)
 
 set (PROJECT_SOURCES
     Bounds.h
@@ -45,7 +44,7 @@ CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/Version.h.in ${CMAKE_CURRENT_SOURCE_D
 list(APPEND PROJECT_SOURCES Version.h)
 
 # Protobuf stuff
-include_directories(${Protobuf_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS})
+include_directories(${Protobuf_INCLUDE_DIRS})
 
 message(STATUS "Using Protocol Buffers ${Protobuf_VERSION}")
 
@@ -74,7 +73,6 @@ add_library(Common STATIC ${PROJECT_SOURCES})
 target_link_libraries(Common
     PRIVATE
         protobuf::libprotobuf
-        ${CUDA_LIBRARIES}
 )
 
 target_compile_definitions(Common PUBLIC $<$<CONFIG:DEBUG>:DEBUG>)

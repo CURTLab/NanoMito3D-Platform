@@ -27,7 +27,6 @@
 #include <array>
 
 #include "Bounds.h"
-#include "Types.h"
 
 struct Localization
 {
@@ -55,6 +54,7 @@ public:
 	inline constexpr float pixelSize() const { return m_pixelSize; }
 	inline constexpr float minZ() const { return m_minZ; }
 	inline constexpr float maxZ() const { return m_maxZ; }
+	inline constexpr int numFrames() const { return m_numFrames-1; }
 
 	inline constexpr Bounds<float> bounds() const {
 		return {0.f, m_width * m_pixelSize,  0.f, m_height * m_pixelSize, m_minZ, m_maxZ };
@@ -64,20 +64,16 @@ public:
 
 	void copyMetaDataFrom(const Localizations &other);
 
-	bool copyTo(DeviceType device);
-	const Localization *constData(DeviceType device) const;
+	inline const Localization *constData() const { return data(); }
 
 private:
-	void alloc(DeviceType device, size_t n);
-
 	int m_width;
 	int m_height;
 	float m_pixelSize;
 	float m_minZ;
 	float m_maxZ;
 	int m_channels;
-	Localization *m_dData;
-	size_t m_dSize;
+	int m_numFrames;
 
 };
 

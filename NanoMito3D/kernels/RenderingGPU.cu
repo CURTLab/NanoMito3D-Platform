@@ -95,23 +95,35 @@ Volume Rendering::render_gpu(Localizations &locs, std::array<float,3> voxelSize,
 	thrust::device_vector<uint8_t> dVolume(hVolume.voxels());
 	thrust::fill_n(dVolume.begin(), dVolume.size(), 0);
 
+	// copy all localizations
 	const uint32_t n = static_cast<uint32_t>(locs.size());
+	const size_t bytes = locs.size() * sizeof(Localization);
 
-	locs.copyTo(DeviceType::Device);
-
-	const dim3 block(BLOCK_SIZE);
-	const dim3 grid((n + block.x - 1)/block.x);
-	drawPSF_kernel<<<grid,block>>>(thrust::raw_pointer_cast(dVolume.data()),
-											 locs.constData(DeviceType::Device), n,
-											 dims,
-											 make_float3(voxelSize[0], voxelSize[1], voxelSize[2]),
-			windowSize
-			);
+	Localization *dLocs = nullptr;
+	cudaMalloc(&dLocs, bytes);
+	cudaMemcpy(dLocs, locs.data(), bytes, cudaMemcpyHostToDevice);
 
 	GPU::cudaCheckError();
 	cudaDeviceSynchronize();
 
+	const dim3 block(BLOCK_SIZE);
+	const dim3 grid((n + block.x - 1)/block.x);
+	drawPSF_kernel<<<grid,block>>>(thrust::raw_pointer_cast(dVolume.data()),
+											 dLocs, n,
+											 dims,
+											 make_float3(voxelSize[0], voxelSize[1], voxelSize[2]),
+											 windowSize
+											 );
+
+	GPU::cudaCheckError();
+	cudaDeviceSynchronize();
+
+	cudaFree(dLocs);
+
 	cudaMemcpy(hVolume.data(), thrust::raw_pointer_cast(dVolume.data()), hVolume.voxels(), cudaMemcpyDeviceToHost);
+
+	GPU::cudaCheckError();
+	cudaDeviceSynchronize();
 
 	return hVolume;
 }
