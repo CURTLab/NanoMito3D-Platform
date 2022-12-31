@@ -100,6 +100,9 @@ public:
 	// map object positions to voxel postions
 	std::array<int,3> invMapVoxel(float x, float y, float z) const;
 
+	// map index to x,y,z voxel position
+	std::array<int,3> mapIndex(size_t index) const;
+
 	// calculate histogram (cpu only)
 	std::array<uint32_t,256> hist() const;
 

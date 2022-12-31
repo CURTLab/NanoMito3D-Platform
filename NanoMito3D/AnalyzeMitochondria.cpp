@@ -37,7 +37,6 @@
 #include "Skeletonize3D.h"
 #include "AnalyzeSkeleton.h"
 #include "Segments.h"
-#include "Octree.h"
 
 AnalyzeMitochondria::AnalyzeMitochondria(QObject *parent)
 	: QObject{parent}
@@ -82,6 +81,8 @@ void AnalyzeMitochondria::render(std::array<float, 3> voxelSize, std::array<floa
 {
 	auto func = [this,voxelSize,maxPA,windowSize,channel,minPts,radius,useGPU,densityFilter]() {
 		try {
+			emit progressRangeChanged(0, 0);
+
 			// filter localizations by channel and PA
 			auto start = std::chrono::steady_clock::now();
 
@@ -139,6 +140,8 @@ void AnalyzeMitochondria::analyze(float sigma, ThresholdMethods thresholdMethod,
 		try {
 			Volume filteredVolume(m_volume.size(), m_volume.voxelSize(), m_volume.origin());
 
+			emit progressRangeChanged(0, 0);
+
 			// gaussian filter 3D
 			auto start = std::chrono::steady_clock::now();
 
@@ -162,9 +165,16 @@ void AnalyzeMitochondria::analyze(float sigma, ThresholdMethods thresholdMethod,
 				case ThresholdMethods::LocalOtsu: LocalThreshold::localThrehsold_gpu(LocalThreshold::Otsu, filteredVolume, filteredVolume, 11); break;
 				}
 			} else {
+
+				emit progressRangeChanged(0, static_cast<int>(filteredVolume.voxels())-1);
+
+				auto cb = [&](uint32_t i, uint32_t n) {
+					emit progressChanged(i);
+				};
+
 				switch(thresholdMethod) {
-				case ThresholdMethods::LocalISOData: LocalThreshold::localThrehsold_cpu(LocalThreshold::IsoData, filteredVolume, filteredVolume, 11); break;
-				case ThresholdMethods::LocalOtsu: LocalThreshold::localThrehsold_cpu(LocalThreshold::Otsu, filteredVolume, filteredVolume, 11); break;
+				case ThresholdMethods::LocalISOData: LocalThreshold::localThrehsold_cpu(LocalThreshold::IsoData, filteredVolume, filteredVolume, 11, cb); break;
+				case ThresholdMethods::LocalOtsu: LocalThreshold::localThrehsold_cpu(LocalThreshold::Otsu, filteredVolume, filteredVolume, 11, cb); break;
 				}
 			}
 

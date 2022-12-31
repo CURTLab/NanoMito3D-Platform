@@ -298,7 +298,17 @@ std::array<int, 3> Volume::invMapVoxel(float x, float y, float z) const
 {
 	return {static_cast<int>((x - d->origin[0])/d->voxelSize[0]),
 			  static_cast<int>((y - d->origin[1])/d->voxelSize[1]),
-			  static_cast<int>((z - d->origin[2])/d->voxelSize[2])};
+				static_cast<int>((z - d->origin[2])/d->voxelSize[2])};
+}
+
+std::array<int, 3> Volume::mapIndex(size_t index) const
+{
+	const int z = static_cast<int>(index / d->stride[2]);
+	index -= d->stride[2] * z;
+	const int y = static_cast<int>(index / d->stride[1]);
+	index -= d->stride[1] * y;
+	const int x = static_cast<int>(index / d->stride[0]);
+	return {x, y, z};
 }
 
 std::array<uint32_t, 256> Volume::hist() const

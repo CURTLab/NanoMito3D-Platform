@@ -50,8 +50,6 @@ MainWindow::MainWindow(QWidget *parent)
 {
 	m_ui->setupUi(this);
 
-	GPU::initGPU();
-
 	m_ui->splitter->setSizes({250, width()-250});
 	m_ui->plot->setTitle("Classification of voxels");
 	m_ui->statusbar->addPermanentWidget(m_bar);
@@ -125,7 +123,7 @@ MainWindow::MainWindow(QWidget *parent)
 	connect(m_ui->buttonRender, &QAbstractButton::released,
 			  this, [this]() {
 		m_ui->frame->setEnabled(false);
-		m_bar->setVisible(false);
+		m_bar->setVisible(true);
 		m_ui->statusbar->showMessage(tr("Start rendering volume"));
 		m_analyis.render(voxelSize(), maxPA(), m_ui->spinWindowSize->value(), m_ui->comboChannel->currentIndex(),
 							  m_ui->groupDensityFilter->isChecked(), m_ui->spinMinPoints->value(), m_ui->spinRadius->value(),
@@ -139,6 +137,7 @@ MainWindow::MainWindow(QWidget *parent)
 		m_ui->volumeView->clear();
 		m_ui->volumeView->setVolume(m_analyis.volume(), {0, 0, 1, 255});
 		m_ui->frame->setEnabled(true);
+		m_bar->setVisible(false);
 	});
 
 	connect(m_ui->buttonAnalyse, &QAbstractButton::released,
