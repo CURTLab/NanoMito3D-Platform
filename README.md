@@ -16,6 +16,9 @@ NanoMito3D-Platform contains software applications for:
 ## CellCounter Application
 ![Thumbnail](https://raw.githubusercontent.com/CURTLab/NanoMito3D-Platform/main/thumbnail_cellcounter.png)
 
+## BleedThroughCorrection Application
+![Thumbnail](https://raw.githubusercontent.com/CURTLab/NanoMito3D-Platform/main/thumbnail_bleedthroughcorr.PNG)
+
 # Tested prerequisites for compilation
 * Windows 10
 * Visual Studio 2019
