@@ -92,7 +92,7 @@ void AnalyzeMitochondria::render(std::array<float, 3> voxelSize, std::array<floa
 			}), m_locs.end());
 
 			auto dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
-			qDebug().nospace() << "Filtered: " << m_locs.size() << " in " << dur.count() << " s";
+			qDebug().nospace() << "Filtered channel/PA (CPU): " << m_locs.size() << " in " << dur.count() << " s";
 
 			if (densityFilter) {
 				// filter by density
@@ -105,7 +105,7 @@ void AnalyzeMitochondria::render(std::array<float, 3> voxelSize, std::array<floa
 
 				dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 
-				qDebug().nospace() << "Density filter " << (useGPU ? "GPU" : "CPU") << ": " << m_locs.size()  << " in " << dur.count() << " s";
+				qDebug().nospace() << "Density filter (" << (useGPU ? "GPU" : "CPU") << "): " << m_locs.size()  << " in " << dur.count() << " s";
 			}
 
 			// 3D rendering
@@ -118,7 +118,7 @@ void AnalyzeMitochondria::render(std::array<float, 3> voxelSize, std::array<floa
 
 			dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 
-			qDebug().nospace() << "Rendering " << (useGPU ? "GPU" : "CPU") << ": " << dur.count() << " s";
+			qDebug().nospace() << "Rendering (" << (useGPU ? "GPU" : "CPU") << "): " << dur.count() << " s";
 
 			emit volumeRendered();
 		} catch(std::exception &e) {
@@ -144,11 +144,14 @@ void AnalyzeMitochondria::analyze(float sigma, ThresholdMethods thresholdMethod,
 
 			const int windowSize = (int)(sigma * 4) | 1;
 			// default 7
-			GaussianFilter::gaussianFilter_gpu(m_volume.constData(), filteredVolume.data(), m_volume.width(), m_volume.height(), m_volume.depth(), windowSize, sigma);
+			if (useGPU)
+				GaussianFilter::gaussianFilter_gpu(m_volume.constData(), filteredVolume.data(), m_volume.width(), m_volume.height(), m_volume.depth(), windowSize, sigma);
+			else
+				GaussianFilter::gaussianFilter_cpu(m_volume.constData(), filteredVolume.data(), m_volume.width(), m_volume.height(), m_volume.depth(), windowSize, sigma);
 
 			auto dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 
-			qDebug().nospace() << "Gaussian filter (GPU): " << dur.count() << " s";
+			qDebug().nospace() << "Gaussian filter (" << (useGPU ? "GPU" : "CPU") << "): " << dur.count() << " s";
 
 			// local thresholding 3D
 			start = std::chrono::steady_clock::now();
@@ -167,7 +170,7 @@ void AnalyzeMitochondria::analyze(float sigma, ThresholdMethods thresholdMethod,
 
 			dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 
-			qDebug().nospace() << "Threshold filter " << (useGPU ? "GPU" : "CPU") << ": " << dur.count() << " s";
+			qDebug().nospace() << "Threshold filter (" << (useGPU ? "GPU" : "CPU") << "): " << dur.count() << " s";
 
 			// skeleton 3D
 			start = std::chrono::steady_clock::now();

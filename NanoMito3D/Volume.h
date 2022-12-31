@@ -48,6 +48,7 @@ public:
 
 	// load a tiff stack as volume
 	static Volume loadTif(const std::string &fileName, std::array<float,3> voxelSize = {1.f,1.f,1.f}, std::array<float,3> origin = {0.f});
+	void saveTif(const std::string &fileName) const;
 
 	// checks if value is in bounds
 	// returns value at x, y, z in case of in-bounds

@@ -156,6 +156,16 @@ Volume Volume::loadTif(const std::string &fileName, std::array<float, 3> voxelSi
 	return ret;
 }
 
+void Volume::saveTif(const std::string &fileName) const
+{
+	std::vector<cv::Mat> stack(d->dims[2]);
+	for (int z = 0; z < d->dims[2]; ++z)
+		stack[z] = cv::Mat(d->dims[0], d->dims[1], CV_8U, d->hData + d->idx(0, 0, z));
+
+	if (!cv::imwritemulti(fileName, stack))
+		throw std::runtime_error("Could not save tif stack at " + fileName);
+}
+
 uint8_t Volume::value(int x, int y, int z, uint8_t defaultVal) const
 {
 	return d->inBounds(x, y, z) ? d->hData[d->idx(x, y, z)] : defaultVal;

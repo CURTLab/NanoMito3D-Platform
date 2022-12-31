@@ -29,6 +29,7 @@ set(PROJECT_SOURCES
     kernels/DensityFilterCPU.cpp
     kernels/Device.cu
     kernels/GaussianFilterGPU.cu
+    kernels/GaussianFilterCPU.cpp
     kernels/RenderingCPU.cpp
     kernels/RenderingGPU.cu
     kernels/LocalThresholdGPU.cu

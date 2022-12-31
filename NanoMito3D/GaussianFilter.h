@@ -29,6 +29,7 @@ namespace GaussianFilter
 {
 
 void gaussianFilter_gpu(const uint8_t *input, uint8_t *output, int width, int height, int depth, int size, float sigma);
+void gaussianFilter_cpu(const uint8_t *input, uint8_t *output, int width, int height, int depth, int size, float sigma);
 
 }
 
