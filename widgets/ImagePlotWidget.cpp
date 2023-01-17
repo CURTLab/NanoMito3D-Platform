@@ -317,16 +317,14 @@ void ImagePlotWidget::clear()
 	Q_D(ImagePlotWidget);
 	d->spectrogram->setData(nullptr);
 	d->data = nullptr;
-	d->detachItems(QwtPlotItem::Rtti_PlotCurve);
-	d->detachItems(QwtPlotItem::Rtti_PlotMarker);
+	d->detachItems(QwtPlotItem::Rtti_PlotShape);
 	d->replot();
 }
 
 void ImagePlotWidget::clearAnnotation()
 {
 	Q_D(ImagePlotWidget);
-	d->detachItems(QwtPlotItem::Rtti_PlotCurve);
-	d->detachItems(QwtPlotItem::Rtti_PlotMarker);
+	d->detachItems(QwtPlotItem::Rtti_PlotShape);
 	d->replot();
 }
 
