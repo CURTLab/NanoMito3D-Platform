@@ -383,8 +383,38 @@
      <height>21</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <widget class="QMenu" name="menuExport">
+     <property name="title">
+      <string>Export</string>
+     </property>
+     <addaction name="actionExportVolume"/>
+     <addaction name="actionExportFilteredVolume"/>
+    </widget>
+    <addaction name="menuExport"/>
+   </widget>
+   <addaction name="menuFile"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionExportVolume">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Volume ...</string>
+   </property>
+  </action>
+  <action name="actionExportFilteredVolume">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Filtered volume ...</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>

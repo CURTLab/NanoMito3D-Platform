@@ -24,17 +24,7 @@
 #include "ui_MainWindow.h"
 
 #include "Version.h"
-
 #include "Localizations.h"
-#include "Octree.h"
-
-#include "DensityFilter.h"
-#include "Device.h"
-#include "GaussianFilter.h"
-#include "Rendering.h"
-#include "LocalThreshold.h"
-#include "Skeletonize3D.h"
-#include "AnalyzeSkeleton.h"
 #include "Segments.h"
 
 #include <chrono>
@@ -73,8 +63,18 @@ MainWindow::MainWindow(QWidget *parent)
 
 	setWindowTitle(tr("NanoMito3D r%1").arg(GIT_REVISION));
 
-	m_analyis.loadModel(DEV_PATH "/examples/mitoTrainDataSet.csv");
+	m_analyis.loadModel(DEV_PATH "examples/mitoTrainDataSet.csv");
 	//m_analyis.loadModel(DEV_PATH "/examples/mito-model.json");
+
+	connect(m_ui->actionExportVolume, &QAction::triggered,
+			  this, [this]() {
+		exportVolumeDialog(m_analyis.volume(), "volume");
+	});
+
+	connect(m_ui->actionExportFilteredVolume, &QAction::triggered,
+			  this, [this]() {
+		exportVolumeDialog(m_analyis.filteredVolume(), "filtered volume");
+	});
 
 	connect(&m_analyis, &AnalyzeMitochondria::progressRangeChanged,
 			  m_bar, &QProgressBar::setRange);
@@ -82,10 +82,16 @@ MainWindow::MainWindow(QWidget *parent)
 	connect(&m_analyis, &AnalyzeMitochondria::progressChanged,
 			  m_bar, &QProgressBar::setValue);
 
+	connect(&m_analyis, &AnalyzeMitochondria::error, this, [this](QString title, QString errorMessage){
+		m_ui->frame->setEnabled(true);
+		QMessageBox::critical(this, title, errorMessage);
+			  });
+
+	// localizations loading section
 	connect(m_ui->buttonSelectFile, &QAbstractButton::released,
 			  this, [this]() {
 		m_bar->setVisible(false);
-		QString fileName = QFileDialog::getOpenFileName(this, "Open localization file", DEV_PATH "/examples", "TSF File (*.tsf)");
+		QString fileName = QFileDialog::getOpenFileName(this, "Open localization file", DEV_PATH "examples/", "TSF File (*.tsf)");
 		if (!fileName.isEmpty()) {
 			m_ui->statusbar->showMessage(tr("Load %1").arg(QFileInfo(fileName).fileName()));
 			m_ui->frame->setEnabled(false);
@@ -94,13 +100,10 @@ MainWindow::MainWindow(QWidget *parent)
 		}
 	});
 
-	connect(&m_analyis, &AnalyzeMitochondria::error, this, [this](QString title, QString errorMessage){
-		m_ui->frame->setEnabled(true);
-		QMessageBox::critical(this, title, errorMessage);
-			  });
-
 	connect(&m_analyis, &AnalyzeMitochondria::localizationsLoaded, this, [this]() {
 		m_bar->setVisible(false);
+		m_ui->actionExportVolume->setEnabled(false);
+		m_ui->actionExportFilteredVolume->setEnabled(false);
 		m_ui->buttonRender->setEnabled(true);
 		m_ui->buttonAnalyse->setEnabled(false);
 		m_ui->editFile->setText(m_analyis.fileName());
@@ -120,6 +123,7 @@ MainWindow::MainWindow(QWidget *parent)
 		m_ui->frame->setEnabled(true);
 	});
 
+	// volume rendering section
 	connect(m_ui->buttonRender, &QAbstractButton::released,
 			  this, [this]() {
 		m_ui->frame->setEnabled(false);
@@ -137,9 +141,11 @@ MainWindow::MainWindow(QWidget *parent)
 		m_ui->volumeView->clear();
 		m_ui->volumeView->setVolume(m_analyis.volume(), {0, 0, 1, 255});
 		m_ui->frame->setEnabled(true);
+		m_ui->actionExportVolume->setEnabled(true);
 		m_bar->setVisible(false);
 	});
 
+	// analyse volume section
 	connect(m_ui->buttonAnalyse, &QAbstractButton::released,
 			  this, [this]() {
 		m_ui->frame->setEnabled(false);
@@ -152,7 +158,7 @@ MainWindow::MainWindow(QWidget *parent)
 		m_ui->statusbar->showMessage(tr("Volume successfully analyzed!"));
 
 		const auto &segments = m_analyis.segments();
-		const float r = std::max({segments.volume.voxelSize()[0], segments.volume.voxelSize()[1], segments.volume.voxelSize()[2]});
+		const float r = 200.f;//std::max({segments.volume.voxelSize()[0], segments.volume.voxelSize()[1], segments.volume.voxelSize()[2]});
 
 		m_ui->buttonClassify->setEnabled(true);
 		m_ui->volumeView->clear();
@@ -164,9 +170,11 @@ MainWindow::MainWindow(QWidget *parent)
 				endPoints.push_back(p);
 		}
 		m_ui->volumeView->addSpheres(endPoints, 0.8f * r, {1.f,0.f,0.f});
+		m_ui->actionExportFilteredVolume->setEnabled(true);
 		m_ui->frame->setEnabled(true);
 	});
 
+	// classify segments section
 	connect(m_ui->buttonClassify, &QAbstractButton::released,
 			  this, [this]() {
 		m_ui->frame->setEnabled(false);
@@ -199,6 +207,19 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
+}
+
+void MainWindow::exportVolumeDialog(const Volume &volume, const QString &name)
+{
+	QString fileName = QFileDialog::getSaveFileName(this, tr("Export %1").arg(name), "", "TIF Stack (*.tif)");
+	if (fileName.isEmpty())
+		return;
+	try {
+		volume.saveTif(fileName.toStdString());
+		m_ui->statusbar->showMessage(tr("Exported %1 to '%2'").arg(name).arg(fileName));
+	} catch(std::runtime_error &e) {
+		QMessageBox::critical(this, tr("Error"), tr("Could not export %1 '%2'. Reason: %3").arg(name).arg(fileName).arg(e.what()));
+	}
 }
 
 std::array<float, 3> MainWindow::voxelSize() const

@@ -138,7 +138,7 @@ void AnalyzeMitochondria::analyze(float sigma, ThresholdMethods thresholdMethod,
 {
 	auto func = [this,sigma,thresholdMethod,useGPU]() {
 		try {
-			Volume filteredVolume(m_volume.size(), m_volume.voxelSize(), m_volume.origin());
+			m_filteredVolume = Volume(m_volume.size(), m_volume.voxelSize(), m_volume.origin());
 
 			emit progressRangeChanged(0, 0);
 
@@ -148,9 +148,9 @@ void AnalyzeMitochondria::analyze(float sigma, ThresholdMethods thresholdMethod,
 			const int windowSize = (int)(sigma * 4) | 1;
 			// default 7
 			if (useGPU)
-				GaussianFilter::gaussianFilter_gpu(m_volume.constData(), filteredVolume.data(), m_volume.width(), m_volume.height(), m_volume.depth(), windowSize, sigma);
+				GaussianFilter::gaussianFilter_gpu(m_volume.constData(), m_filteredVolume.data(), m_volume.width(), m_volume.height(), m_volume.depth(), windowSize, sigma);
 			else
-				GaussianFilter::gaussianFilter_cpu(m_volume.constData(), filteredVolume.data(), m_volume.width(), m_volume.height(), m_volume.depth(), windowSize, sigma);
+				GaussianFilter::gaussianFilter_cpu(m_volume.constData(), m_filteredVolume.data(), m_volume.width(), m_volume.height(), m_volume.depth(), windowSize, sigma);
 
 			auto dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 
@@ -161,20 +161,20 @@ void AnalyzeMitochondria::analyze(float sigma, ThresholdMethods thresholdMethod,
 
 			if (useGPU) {
 				switch(thresholdMethod) {
-				case ThresholdMethods::LocalISOData: LocalThreshold::localThrehsold_gpu(LocalThreshold::IsoData, filteredVolume, filteredVolume, 11); break;
-				case ThresholdMethods::LocalOtsu: LocalThreshold::localThrehsold_gpu(LocalThreshold::Otsu, filteredVolume, filteredVolume, 11); break;
+				case ThresholdMethods::LocalISOData: LocalThreshold::localThrehsold_gpu(LocalThreshold::IsoData, m_filteredVolume, m_filteredVolume, 11); break;
+				case ThresholdMethods::LocalOtsu: LocalThreshold::localThrehsold_gpu(LocalThreshold::Otsu, m_filteredVolume, m_filteredVolume, 11); break;
 				}
 			} else {
 
-				emit progressRangeChanged(0, static_cast<int>(filteredVolume.voxels())-1);
+				emit progressRangeChanged(0, static_cast<int>(m_filteredVolume.voxels())-1);
 
 				auto cb = [&](uint32_t i, uint32_t n) {
 					emit progressChanged(i);
 				};
 
 				switch(thresholdMethod) {
-				case ThresholdMethods::LocalISOData: LocalThreshold::localThrehsold_cpu(LocalThreshold::IsoData, filteredVolume, filteredVolume, 11, cb); break;
-				case ThresholdMethods::LocalOtsu: LocalThreshold::localThrehsold_cpu(LocalThreshold::Otsu, filteredVolume, filteredVolume, 11, cb); break;
+				case ThresholdMethods::LocalISOData: LocalThreshold::localThrehsold_cpu(LocalThreshold::IsoData, m_filteredVolume, m_filteredVolume, 11, cb); break;
+				case ThresholdMethods::LocalOtsu: LocalThreshold::localThrehsold_cpu(LocalThreshold::Otsu, m_filteredVolume, m_filteredVolume, 11, cb); break;
 				}
 			}
 
@@ -185,7 +185,7 @@ void AnalyzeMitochondria::analyze(float sigma, ThresholdMethods thresholdMethod,
 			// skeleton 3D
 			start = std::chrono::steady_clock::now();
 
-			Skeleton3D::skeletonize(filteredVolume, m_skeleton);
+			Skeleton3D::skeletonize(m_filteredVolume, m_skeleton);
 
 			dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 
@@ -220,7 +220,7 @@ void AnalyzeMitochondria::analyze(float sigma, ThresholdMethods thresholdMethod,
 			int id = 1;
 			for (int i = 0; i < trees.size(); ++i) {
 				const auto &t = trees[i];
-				auto [segment,voxels,box] = trees.extractVolume(filteredVolume, 1, i);
+				auto [segment,voxels,box] = trees.extractVolume(m_filteredVolume, 1, i);
 
 				if ((box.width() <= 1) || (box.height() <= 1) || (box.depth() <= 1) || (voxels < 50)) {
 					continue;

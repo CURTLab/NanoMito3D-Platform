@@ -45,6 +45,8 @@ public:
 private slots:
 
 private:
+	void exportVolumeDialog(const Volume &volume, const QString &name);
+
 	std::array<float,3> voxelSize() const;
 	std::array<float,3> maxPA() const;
 
