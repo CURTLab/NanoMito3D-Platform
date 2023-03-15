@@ -49,7 +49,7 @@ __device__ uint8_t atomicMaxU8(uint8_t* address, uint8_t val)
 	return old;
 }
 
-__global__ void drawPSF_kernel(uint8_t *dVolume, const Localization *dLocs, uint32_t n, const int3 volumeDims, const float3 voxelSize, int windowSize)
+__global__ void drawPSF_kernel(uint8_t *dVolume, const Localization *dLocs, uint32_t n, const int3 volumeDims, const float3 voxelSize, const float3 origin, int windowSize)
 {
 	const int i = blockIdx.x * blockDim.x + threadIdx.x;
 	if (i >= n)
@@ -57,11 +57,16 @@ __global__ void drawPSF_kernel(uint8_t *dVolume, const Localization *dLocs, uint
 
 	const Localization &l = dLocs[i];
 
-	const int ix = static_cast<int>(std::round((l.x / voxelSize.x)));
-	const int iy = static_cast<int>(std::round((l.y / voxelSize.y)));
-	const int iz = static_cast<int>(std::round((l.z / voxelSize.z)));
+	const float3 pos = make_float3(l.x - origin.x, l.y - origin.y, l.z - origin.z);
+
+	const int ix = static_cast<int>(std::round((pos.x / voxelSize.x)));
+	const int iy = static_cast<int>(std::round((pos.y / voxelSize.y)));
+	const int iz = static_cast<int>(std::round((pos.z / voxelSize.z)));
 
 	const size_t strideZ = volumeDims.x * volumeDims.y;
+
+	// __device__ ​ float fmaf ( float  x, float  y, float  z )
+	// single instruction x * y + z
 
 	const int w = windowSize/2;
 	for (int z = -w; z <= w; ++z) {
@@ -70,14 +75,16 @@ __global__ void drawPSF_kernel(uint8_t *dVolume, const Localization *dLocs, uint
 				if ((ix + x < 0) || (iy + y < 0) || (iz + z < 0) ||
 					 (ix + x >= volumeDims.x) || (iy + y >= volumeDims.y) || (iz + z >= volumeDims.z))
 					continue;
-				const float tx = ((ix + x) * voxelSize.x - l.x) / l.PAx;
-				const float ty = ((iy + y) * voxelSize.y - l.y) / l.PAy;
-				const float tz = ((iz + z) * voxelSize.z - l.z) / l.PAz;
-				const float e = min((255.f/windowSize)*expf(-0.5f * tx * tx -0.5f * ty * ty -0.5f * tz * tz), 255.f);
-				const uint8_t val = static_cast<uint8_t>(e);
 				const size_t addr = (ix + x) + volumeDims.x * (iy + y) + strideZ * (iz + z);
+				uint8_t *dst = dVolume + addr;
+
+				const float tx = fmaf(ix + x, voxelSize.x, -pos.x) / l.PAx;
+				const float ty = fmaf(iy + y, voxelSize.y, -pos.y) / l.PAy;
+				const float tz = fmaf(iz + z, voxelSize.z, -pos.z) / l.PAz;
+				const float e = expf(-0.5f * tx * tx -0.5f * ty * ty -0.5f * tz * tz);
+				const uint8_t val = static_cast<uint8_t>(min(fmaf((255.f/windowSize), e, *dst), 255.f));
 				// safely write max to volume
-				atomicMaxU8(dVolume + addr, val);
+				atomicMaxU8(dst, val);
 			}
 		}
 	}
@@ -90,7 +97,9 @@ Volume Rendering::render_gpu(Localizations &locs, std::array<float,3> voxelSize,
 	dims.y = static_cast<int>(std::ceilf(locs.height() / voxelSize[1]));
 	dims.z = static_cast<int>(std::ceilf(locs.depth()  / voxelSize[2]));
 
-	Volume hVolume({dims.x, dims.y, dims.z}, voxelSize, {0.f, 0.f, locs.minZ()});
+	float3 origin = make_float3(0.f, 0.f, locs.minZ());
+
+	Volume hVolume({dims.x, dims.y, dims.z}, voxelSize, {origin.x, origin.y, origin.z});
 
 	thrust::device_vector<uint8_t> dVolume(hVolume.voxels());
 	thrust::fill_n(dVolume.begin(), dVolume.size(), 0);
@@ -112,6 +121,7 @@ Volume Rendering::render_gpu(Localizations &locs, std::array<float,3> voxelSize,
 											 dLocs, n,
 											 dims,
 											 make_float3(voxelSize[0], voxelSize[1], voxelSize[2]),
+											 origin,
 											 windowSize
 											 );
 
