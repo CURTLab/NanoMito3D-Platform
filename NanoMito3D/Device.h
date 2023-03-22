@@ -32,6 +32,10 @@
 #define HOST_DEV
 #endif
 
+struct vec3 {
+	float x, y, z;
+};
+
 namespace GPU {
 
 void initGPU();

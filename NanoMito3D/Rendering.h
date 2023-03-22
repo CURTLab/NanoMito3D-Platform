@@ -31,6 +31,8 @@ namespace Rendering {
 Volume render_gpu(Localizations &locs, std::array<float,3> voxelSize, int windowSize);
 Volume render_cpu(Localizations &locs, std::array<float,3> voxelSize, int windowSize);
 
+void render_hist3D_gpu(const Localizations &locs, uint32_t *output, std::array<int,3> size, std::array<float,3> voxelSize, std::array<float,3> origin);
+
 }
 
 #endif // RENDERING_H

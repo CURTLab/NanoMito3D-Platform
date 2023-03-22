@@ -19,6 +19,7 @@ find_package(VTK 8.0 REQUIRED COMPONENTS GUISupportQt RenderingVolumeOpenGL2 Com
 find_package(OpenCV REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(CUDA 7.0 REQUIRED)
+find_package(HDF5)
 
 add_subdirectory(3dparty/cuNSearch)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../common ${CMAKE_CURRENT_BINARY_DIR}/common)
@@ -46,7 +47,7 @@ set(PROJECT_SOURCES
     Skeletonize3D.h Skeletonize3D.cpp
     AnalyzeSkeleton.h AnalyzeSkeleton.cpp
     SkeletonGraph.h SkeletonGraph.cpp
-    Segments.h Segments.cpp
+    Segments.h
     AnalyzeMitochondria.h AnalyzeMitochondria.cpp
 )
 
@@ -72,6 +73,12 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
         Common
         Widgets
 )
+
+if (HDF5_FOUND)
+    message(STATUS "Support hdf5 features")
+    target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE HDF5::HDF5)
+    target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE "DEV_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/../\"")
+endif()
 
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES CUDA_ARCHITECTURES "50")
 

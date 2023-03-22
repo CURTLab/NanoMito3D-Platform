@@ -32,19 +32,22 @@
 
 #define M_PIF 3.141592653589793238462643383279502884e+00f
 
-__global__ void generateGaussian_kernel(float *d_kernel, int size, float sigma)
+// powf(sqrtf(2.f*M_PIF),3)
+#define M_EXP3N 15.7496099457224f
+
+__global__ void generateGaussian_kernel(float *d_kernel, int size, float3 sigma)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
 	int z = blockIdx.z * blockDim.z + threadIdx.z;
 	if (x >= size || y >= size || z >= size)
 		return;
-	float g = 0.5f/(sigma*sigma);
-	float f = 1.f/(2.f*M_PIF*sigma*sigma);
-	float i = x - size/2;
-	float j = y - size/2;
-	float k = z - size/2;
-	d_kernel[x + y * size + z * size * size] = f * exp(-g*i*i-g*j*j-g*k*k);
+	float3 g = make_float3(0.5f/(sigma.x*sigma.x),0.5f/(sigma.y*sigma.y),0.5f/(sigma.z*sigma.z));
+	float f = 1.f/(M_EXP3N*sigma.x*sigma.y*sigma.z);
+	float i = x - size*0.5f;
+	float j = y - size*0.5f;
+	float k = z - size*0.5f;
+	d_kernel[1ull * x + 1ull * y * size + 1ull * z * size * size] = f * exp(-g.x*i*i-g.y*j*j-g.z*k*k);
 }
 
 __global__ void filter3D_kernel(const uint8_t *d_input, uint8_t *d_output, int width, int height, int depth, int size, const float *d_kernel)
@@ -80,7 +83,7 @@ __global__ void filter3D_kernel(const uint8_t *d_input, uint8_t *d_output, int w
 	d_output[idx(x, y, z)] = static_cast<uint8_t>(fmin(fmax(0.f, val / sum), 255.f));
 }
 
-void GaussianFilter::gaussianFilter_gpu(const uint8_t *input, uint8_t *output, int width, int height, int depth, int size, float sigma)
+void GaussianFilter::gaussianFilter_gpu(const uint8_t *input, uint8_t *output, int width, int height, int depth, int size, std::array<float,3> sigma)
 {
 	const int bytes = width * height * depth;
 	const int kbytes = size * size * size * sizeof(float);
@@ -98,7 +101,7 @@ void GaussianFilter::gaussianFilter_gpu(const uint8_t *input, uint8_t *output, i
 	const dim3 kgrid((size + block.x - 1)/block.x,
 						  (size + block.y - 1)/block.y,
 						  (size + block.z - 1)/block.z);
-	generateGaussian_kernel<<<kgrid,block>>>(d_kernel, size, sigma);
+	generateGaussian_kernel<<<kgrid,block>>>(d_kernel, size, make_float3(sigma[0], sigma[1], sigma[2]));
 	GPU::cudaCheckError();
 	cudaDeviceSynchronize();
 

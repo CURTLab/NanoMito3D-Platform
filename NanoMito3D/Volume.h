@@ -50,6 +50,12 @@ public:
 	static Volume loadTif(const std::string &fileName, std::array<float,3> voxelSize = {1.f,1.f,1.f}, std::array<float,3> origin = {0.f});
 	void saveTif(const std::string &fileName) const;
 
+#ifdef USE_H5
+	// load and save volume as h5 file
+	static Volume loadH5(const std::string &fileName, std::string name = "volume");
+	bool saveH5(const std::string &fileName, std::string name = "volume", bool truncate = true, bool compressed = true) const;
+#endif // USE_H5
+
 	// checks if value is in bounds
 	// returns value at x, y, z in case of in-bounds
 	// returns defaultVal in case of out-bounds
@@ -106,9 +112,49 @@ public:
 	// calculate histogram (cpu only)
 	std::array<uint32_t,256> hist() const;
 
+	operator bool() const;
+
 private:
 	std::shared_ptr<VolumeData> d;
 
+};
+
+template<class T>
+struct GenericVolume
+{
+	inline GenericVolume()
+		: width(0), height(0), depth(0)
+		, data(nullptr)
+	{}
+	inline constexpr GenericVolume(int w, int h, int d)
+		: width(w), height(h), depth(d)
+		, data(new T[static_cast<size_t>(w) * h * d])
+	{}
+	inline ~GenericVolume() { delete [] data; }
+
+	inline void alloc(int w, int h, int d) {
+		delete [] data;
+		width = w; height = h; depth = d;
+		data = new T[static_cast<size_t>(w) * h * d];
+	}
+
+	inline constexpr size_t idx(int x, int y, int z) const {
+		return 1ull * x  + static_cast<size_t>(width) * y + static_cast<size_t>(width) * height * z;
+	}
+
+	inline constexpr const T &operator()(int x, int y, int z) const
+	{ return data[idx(x, y, z)]; }
+
+	inline constexpr T &operator()(int x, int y, int z)
+	{ return data[idx(x, y, z)]; }
+
+	GenericVolume(GenericVolume &) = delete;
+	GenericVolume &operator =(GenericVolume &) = delete;
+
+	int width;
+	int height;
+	int depth;
+	T *data;
 };
 
 #endif // VOLUME_H

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2022 Fabian Hauser
+ * Copyright (C) 2022 - 2023 Fabian Hauser
  *
  * Author: Fabian Hauser <fabian.hauser@fh-linz.at>
  * University of Applied Sciences Upper Austria - Linz - Austra
@@ -19,17 +19,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ****************************************************************************/
+#include "MainWindow.h"
 
 #include <QApplication>
-
-#include "MainWindow.h"
 
 int main(int argc, char *argv[])
 {
 	QApplication a(argc, argv);
-
 	MainWindow w;
 	w.show();
-
 	return a.exec();
 }

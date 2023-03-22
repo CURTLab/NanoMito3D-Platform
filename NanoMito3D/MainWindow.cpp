@@ -165,8 +165,8 @@ MainWindow::MainWindow(QWidget *parent)
 		m_ui->volumeView->setVolume(segments.volume, {0., 0., 1., 0.4});
 		std::vector<std::array<float,3>> endPoints;
 		for (const auto &s : segments) {
-			m_ui->volumeView->addGraph(s.graph, segments.volume, 0.5f * r, {0.f, 1.f, 0.f});
-			for (const auto &p : s.endPoints)
+			m_ui->volumeView->addGraph(s->graph, segments.volume, 0.5f * r, {0.f, 1.f, 0.f});
+			for (const auto &p : s->endPoints)
 				endPoints.push_back(p);
 		}
 		m_ui->volumeView->addSpheres(endPoints, 0.8f * r, {1.f,0.f,0.f});

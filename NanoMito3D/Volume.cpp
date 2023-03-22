@@ -22,10 +22,15 @@
 
 #include "Volume.h"
 
+#ifdef USE_H5
+#include <hdf5.h>
+#endif // USE_H5
+
 #include <cuda_runtime_api.h>
 #include <stdexcept>
 #include <assert.h>
 #include <opencv2/opencv.hpp>
+#include <filesystem>
 
 class VolumeData
 {
@@ -160,11 +165,106 @@ void Volume::saveTif(const std::string &fileName) const
 {
 	std::vector<cv::Mat> stack(d->dims[2]);
 	for (int z = 0; z < d->dims[2]; ++z)
-		stack[z] = cv::Mat(d->dims[0], d->dims[1], CV_8U, d->hData + d->idx(0, 0, z));
+		stack[z] = cv::Mat(d->dims[1], d->dims[0], CV_8U, d->hData + d->idx(0, 0, z));
 
 	if (!cv::imwritemulti(fileName, stack))
 		throw std::runtime_error("Could not save tif stack at " + fileName);
 }
+
+#ifdef USE_H5
+Volume Volume::loadH5(const std::string &fileName, std::string name)
+{
+	hid_t file = H5Fopen(fileName.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+
+	if (!H5Lexists(file, name.c_str(), H5P_DEFAULT))
+		return {};
+
+	hid_t dataset = H5Dopen2(file, name.c_str(), H5P_DEFAULT);
+	hid_t vSpaceId = H5Dget_space(dataset);
+	int rank = H5Sget_simple_extent_ndims(vSpaceId);
+	std::vector<hsize_t> dims(rank);
+	H5Sget_simple_extent_dims(vSpaceId, dims.data(), nullptr);
+
+	std::array<float,3> voxelSize, origin;
+
+	hid_t aid1 = H5Aopen(dataset, "voxelSize", H5P_DEFAULT);
+	H5Aread(aid1, H5T_NATIVE_FLOAT, voxelSize.data());
+	H5Aclose(aid1);
+
+	hid_t aid2 = H5Aopen(dataset, "origin", H5P_DEFAULT);
+	H5Aread(aid2, H5T_NATIVE_FLOAT, origin.data());
+	H5Aclose(aid2);
+
+	Volume ret({(int)dims[2], (int)dims[1], (int)dims[0]}, voxelSize, origin);
+	H5Dread(dataset, H5T_NATIVE_UINT8, H5S_ALL, H5S_ALL, H5P_DEFAULT, ret.d->hData);
+
+	H5Sclose(vSpaceId);
+	H5Dclose(dataset);
+	H5Fclose(file);
+
+	return ret;
+}
+
+bool Volume::saveH5(const std::string &fileName, std::string name, bool truncate, bool compressed) const
+{
+	if (std::filesystem::exists(fileName) && truncate)
+		std::filesystem::remove(fileName);
+
+	hid_t file;
+	if (!std::filesystem::exists(fileName))
+		file =  H5Fcreate(fileName.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+	else
+		file =  H5Fopen(fileName.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+	if (file < 0)
+		return false;
+
+	hid_t plist = H5P_DEFAULT;
+	if (compressed) {
+		plist = H5Pcreate(H5P_DATASET_CREATE);
+		hsize_t cdims[3] = {(hsize_t)d->dims[2], (hsize_t)d->dims[1], 1};
+		H5Pset_chunk(plist, 3, cdims);
+		H5Pset_deflate(plist, 6);
+	}
+
+	hid_t fid = H5Screate(H5S_SIMPLE);
+	hsize_t fdim[3] = {(hsize_t)d->dims[2], (hsize_t)d->dims[1], (hsize_t)d->dims[0]};
+	H5Sset_extent_simple(fid, 3, fdim, NULL);
+
+	hid_t dataset = H5Dcreate2(file, name.c_str(), H5T_NATIVE_UINT8, fid, H5P_DEFAULT, plist, H5P_DEFAULT);
+	if (dataset < 0) {
+		H5Sclose(fid);
+		H5Fclose(file);
+	}
+
+	int err = H5Dwrite(dataset, H5T_NATIVE_UINT8, H5S_ALL, H5S_ALL, H5P_DEFAULT, d->hData);
+
+	hsize_t adim[1] = {3};
+
+	// create attribute float voxelSize[3]
+	hid_t aid1 = H5Screate(H5S_SIMPLE);
+	H5Sset_extent_simple(aid1, 1, adim, NULL);
+	hid_t attr1 = H5Acreate2(dataset, "voxelSize", H5T_NATIVE_FLOAT, aid1, H5P_DEFAULT, H5P_DEFAULT);
+	H5Awrite(attr1, H5T_NATIVE_FLOAT, d->voxelSize.data());
+
+	// create attribute float origin[3]
+	hid_t aid2 = H5Screate(H5S_SIMPLE);
+	H5Sset_extent_simple(aid2, 1, adim, NULL);
+	hid_t attr2 = H5Acreate2(dataset, "origin", H5T_NATIVE_FLOAT, aid1, H5P_DEFAULT, H5P_DEFAULT);
+	H5Awrite(attr2, H5T_NATIVE_FLOAT, d->origin.data());
+
+	H5Sclose(aid2);
+	H5Sclose(aid1);
+	H5Sclose(fid);
+
+	if (compressed)
+		H5Pclose(plist);
+
+	H5Dclose(dataset);
+	H5Fclose(file);
+
+	return err >= 0;
+}
+#endif // USE_H5
 
 uint8_t Volume::value(int x, int y, int z, uint8_t defaultVal) const
 {
@@ -319,4 +419,9 @@ std::array<uint32_t, 256> Volume::hist() const
 	for (size_t i = 0; i < d->voxels; ++i)
 		hist[d->hData[i]]++;
 	return hist;
+}
+
+Volume::operator bool() const
+{
+	return d->voxels > 0;
 }

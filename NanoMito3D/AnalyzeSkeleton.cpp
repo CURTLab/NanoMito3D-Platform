@@ -98,11 +98,14 @@ std::tuple<Volume, int, Bounds<int>> Skeleton3D::Trees::extractVolume(const Volu
 	return {ret, voxels, cuboid};
 }
 
-const Skeleton3D::Trees &Skeleton3D::Analysis::calculate(Volume input, Volume originalImage, PruningMode pruneMode, bool pruneEnds, double pruneThreshold, bool shortPath)
+const Skeleton3D::Trees &Skeleton3D::Analysis::calculate(Volume input, Volume originalImage, PruningMode pruneMode, bool pruneEnds, double pruneThreshold, bool shortPath, bool useVoxelSize)
 {
 	m_visited = Volume(input.size());
 	m_visited.fill(0);
 	m_inputImage = input;
+	m_voxelSize[0] = useVoxelSize ? (double)input.voxelSize()[0] : 1.0;
+	m_voxelSize[1] = useVoxelSize ? (double)input.voxelSize()[1] : 1.0;
+	m_voxelSize[2] = useVoxelSize ? (double)input.voxelSize()[2] : 1.0;
 
 	bool doPruneCycles = false;
 	switch (pruneMode) {
@@ -1003,15 +1006,15 @@ void Skeleton3D::Analysis::calculateTripleAndQuadruplePoints()
 	}
 }
 
-double Skeleton3D::Analysis::calculateDistance(const Point &point1, const Point &point2)
+double Skeleton3D::Analysis::calculateDistance(const Point &point1, const Point &point2) const
 {
-	const double dx = (point1.x - point2.x);
-	const double dy = (point1.y - point2.y);
-	const double dz = (point1.z - point2.z);
+	const double dx = m_voxelSize[0] * (point1.x - point2.x);
+	const double dy = m_voxelSize[1] * (point1.y - point2.y);
+	const double dz = m_voxelSize[2] * (point1.z - point2.z);
 	return sqrt(dx * dx + dy * dy + dz * dz);
 }
 
-double Skeleton3D::Analysis::calculateDistance(const std::list<Point> &points)
+double Skeleton3D::Analysis::calculateDistance(const std::list<Point> &points) const
 {
 	const int indexOfLast = static_cast<int>(points.size()) - 1;
 

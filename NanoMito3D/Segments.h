@@ -55,14 +55,16 @@ struct Segment
 	std::vector<std::array<float,3>> endPoints;
 	SegmentData data;
 	Bounds<int> boundingBox;
+	Volume vol;
 	int prediction = 0;
 	int id = -1;
+	std::string fileName;
 };
 
-class Segments : public std::vector<Segment>
+class Segments : public std::vector<std::shared_ptr<Segment>>
 {
 public:
-	Segments();
+	Segments() = default;
 
 	Volume volume;
 

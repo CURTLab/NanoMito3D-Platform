@@ -25,9 +25,9 @@
 #include <opencv2/opencv.hpp>
 
 
-void GaussianFilter::gaussianFilter_cpu(const uint8_t *input, uint8_t *output, int width, int height, int depth, int size, float sigma)
+void GaussianFilter::gaussianFilter_cpu(const uint8_t *input, uint8_t *output, int width, int height, int depth, int size, std::array<float,3> sigma)
 {
-	cv::Mat kernel = cv::getGaussianKernel(size, sigma, CV_32F);
+	cv::Mat kernel = cv::getGaussianKernel(size, sigma[0], CV_32F);
 
 
 	const size_t stride[3] = {1ull, static_cast<size_t>(width), static_cast<size_t>(width) * static_cast<size_t>(height)};
@@ -37,7 +37,7 @@ void GaussianFilter::gaussianFilter_cpu(const uint8_t *input, uint8_t *output, i
 	for (int i = 0; i < depth; ++i) {
 		cv::Mat in(width, height, CV_8U, (void*)(input + idx(0,0,i)));
 		cv::Mat out(width, height, CV_8U, (void*)(output + idx(0,0,i)));
-		cv::GaussianBlur(in, out, {size, size}, sigma, sigma);
+		cv::GaussianBlur(in, out, {size, size}, sigma[0], sigma[0]);
 	}
 
 	// 1d convolution in z directions

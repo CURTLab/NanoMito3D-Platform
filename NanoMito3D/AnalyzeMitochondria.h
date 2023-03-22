@@ -54,6 +54,9 @@ public:
 	// analyze the volume rendered
 	void analyze(float sigma, ThresholdMethods thresholdMethod, bool useGPU, bool threaded = true);
 
+	// analyze skeleton
+	void analyzeSkeleton(Volume filteredVolume, Volume skeleton, bool useGPU, bool threaded = true);
+
 	// classify the analyzed volume
 	void classify(bool threaded = true);
 
@@ -62,12 +65,17 @@ public:
 
 	inline constexpr const QString &fileName() const { return m_fileName; }
 	inline constexpr const Localizations &localizations() const { return m_locs; }
+	inline constexpr Localizations &localizations() { return m_locs; }
 	inline constexpr const Volume &volume() const { return m_volume; }
 	inline constexpr const Segments &segments() const { return m_segments; }
 	inline constexpr const Volume &filteredVolume() const { return m_filteredVolume; }
+	inline constexpr const Volume &skeleton() const { return m_skeleton; }
 	inline constexpr const Volume &classifiedVolume() const { return m_classifiedVolume; }
+	inline constexpr const GenericVolume<uint32_t> &hist() const { return m_hist; }
 	inline constexpr const int numClasses() const { return m_numClasses; }
 	inline constexpr const QVector<double> &classificationResult() const { return m_classificationResult; }
+
+	inline void setVolume(Volume volume) { m_volume = volume; }
 
 signals:
 	void localizationsLoaded();
@@ -87,7 +95,8 @@ private:
 	Volume m_skeleton;
 	Segments m_segments;
 	cv::Ptr<cv::ml::RTrees> m_dtree;
-	Skeleton3D::GenericVolume<int> m_labeledVolume;
+	GenericVolume<int> m_labeledVolume;
+	GenericVolume<uint32_t> m_hist;
 	Volume m_classifiedVolume;
 	int m_numClasses;
 	QVector<double> m_classificationResult;

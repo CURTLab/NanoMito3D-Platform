@@ -137,3 +137,51 @@ Volume Rendering::render_gpu(Localizations &locs, std::array<float,3> voxelSize,
 
 	return hVolume;
 }
+
+__global__ void hist3D_kernel(uint32_t *dVolume, const Localization *dLocs, uint32_t n, const int3 size, const float3 voxelSize, const float3 origin)
+{
+	const int i = blockIdx.x * blockDim.x + threadIdx.x;
+	if (i >= n)
+		return;
+
+	const size_t stride[3] = {1ull, static_cast<size_t>(size.x), static_cast<size_t>(size.x) * size.y};
+
+	const Localization &l = dLocs[i];
+
+	const float3 pos = make_float3(l.x - origin.x, l.y - origin.y, l.z - origin.z);
+
+	const int ix = static_cast<int>(std::round((pos.x / voxelSize.x)));
+	const int iy = static_cast<int>(std::round((pos.y / voxelSize.y)));
+	const int iz = static_cast<int>(std::round((pos.z / voxelSize.z)));
+
+	uint32_t *dst = dVolume + (stride[0] * ix + stride[1] * iy + stride[2] * iz);
+
+	if (ix >= 0 && iy >= 0 && iz >= 0 && ix < size.x && iy < size.y && iz < size.z)
+		atomicAdd(dst, 1);
+}
+
+void Rendering::render_hist3D_gpu(const Localizations &locs, uint32_t *output, std::array<int,3> size, std::array<float,3> voxelSize, std::array<float,3> origin)
+{
+	const size_t voxels = 1ull * size[0] * size[1] * size[2];
+
+	thrust::device_vector<uint32_t> dVolume(voxels);
+	thrust::fill_n(dVolume.begin(), dVolume.size(), 0);
+
+	Localization *dLocs = nullptr;
+	cudaMalloc(&dLocs, sizeof(Localization) * locs.size());
+	cudaMemcpy(dLocs, locs.data(), sizeof(Localization) * locs.size(), cudaMemcpyHostToDevice);
+
+	const uint32_t n = static_cast<uint32_t>(locs.size());
+
+	const dim3 block(BLOCK_SIZE);
+	const dim3 grid((n + block.x - 1)/block.x);
+	hist3D_kernel<<<grid,block>>>(thrust::raw_pointer_cast(dVolume.data()),
+											dLocs, n,
+											make_int3(size[0], size[1], size[2]),
+											make_float3(voxelSize[0], voxelSize[1], voxelSize[2]),
+											make_float3(origin[0], origin[1], origin[2])
+											);
+	cudaFree(dLocs);
+
+	cudaMemcpy(output, thrust::raw_pointer_cast(dVolume.data()), sizeof(uint32_t) * voxels, cudaMemcpyDeviceToHost);
+}

@@ -68,44 +68,6 @@ private:
 
 };
 
-template<class T>
-struct GenericVolume
-{
-	inline GenericVolume()
-		: width(0), height(0), depth(0)
-		, data(nullptr)
-	{}
-	inline constexpr GenericVolume(int w, int h, int d)
-		: width(w), height(h), depth(d)
-		, data(new T[static_cast<size_t>(w) * h * d])
-	{}
-	inline ~GenericVolume() { delete [] data; }
-
-	inline void alloc(int w, int h, int d) {
-		delete [] data;
-		width = w; height = h; depth = d;
-		data = new T[static_cast<size_t>(w) * h * d];
-	}
-
-	inline constexpr const size_t idx(int x, int y, int z) {
-		return x * 1ull + y * static_cast<size_t>(width) + z * static_cast<size_t>(width) * height;
-	}
-
-	inline constexpr const T &operator()(int x, int y, int z) const
-	{ return data[idx(x, y, z)]; }
-
-	inline constexpr T &operator()(int x, int y, int z)
-	{ return data[idx(x, y, z)]; }
-
-	GenericVolume(GenericVolume &) = delete;
-	GenericVolume &operator =(GenericVolume &) = delete;
-
-	int width;
-	int height;
-	int depth;
-	T *data;
-};
-
 class Analysis
 {
 public:
@@ -134,7 +96,8 @@ public:
 								  PruningMode pruneMode = NoPruning,
 								  bool pruneEnds = false,
 								  double pruneThreshold = 0.0,
-								  bool shortPath = false);
+								  bool shortPath = false,
+								  bool useVoxelSize = false);
 
 	const Volume &taggedImage() const;
 	const Volume &shortPathImage() const;
@@ -184,8 +147,8 @@ private:
 	// Calculate number of triple and quadruple points in the skeleton. Triple and quadruple points are junctions with exactly 3 and 4 branches respectively
 	void calculateTripleAndQuadruplePoints();
 
-	static double calculateDistance(const Point &point1, const Point &point2);
-	static double calculateDistance(const std::list<Point> &points);
+	double calculateDistance(const Point &point1, const Point &point2) const;
+	double calculateDistance(const std::list<Point> &points) const;
 	static int numberOfNeighbors(const Volume &v, int x, int y, int z);
 	static void getNeighborhood(const Volume &v, int x, int y, int z, uint8_t neighbors[27]);
 	static std::optional<Point> nextUnvisitedVoxel(const Volume &volume, const Volume &visited, const Point &v);
@@ -226,6 +189,8 @@ private:
 	int m_totalNumberOfEndPoints;
 	int m_totalNumberOfJunctionVoxels;
 	int m_totalNumberOfSlabVoxels;
+
+	double m_voxelSize[3];
 
 	std::vector<Point> m_slabList;
 

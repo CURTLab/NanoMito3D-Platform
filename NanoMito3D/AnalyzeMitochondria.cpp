@@ -37,6 +37,7 @@
 #include "Skeletonize3D.h"
 #include "AnalyzeSkeleton.h"
 #include "Segments.h"
+#include "Octree.h"
 
 AnalyzeMitochondria::AnalyzeMitochondria(QObject *parent)
 	: QObject{parent}
@@ -145,12 +146,18 @@ void AnalyzeMitochondria::analyze(float sigma, ThresholdMethods thresholdMethod,
 			// gaussian filter 3D
 			auto start = std::chrono::steady_clock::now();
 
+			std::array<float,3> sigmaScaled;
+			sigmaScaled[0] = sigma * m_volume.voxelSize()[0] / m_volume.voxelSize()[0];
+			sigmaScaled[1] = sigma * m_volume.voxelSize()[0] / m_volume.voxelSize()[1];
+			sigmaScaled[2] = sigma * m_volume.voxelSize()[0] / m_volume.voxelSize()[2];
+			qDebug() << sigmaScaled[0] << sigmaScaled[1] << sigmaScaled[2];
+
 			const int windowSize = (int)(sigma * 4) | 1;
 			// default 7
 			if (useGPU)
-				GaussianFilter::gaussianFilter_gpu(m_volume.constData(), m_filteredVolume.data(), m_volume.width(), m_volume.height(), m_volume.depth(), windowSize, sigma);
+				GaussianFilter::gaussianFilter_gpu(m_volume.constData(), m_filteredVolume.data(), m_volume.width(), m_volume.height(), m_volume.depth(), windowSize, sigmaScaled);
 			else
-				GaussianFilter::gaussianFilter_cpu(m_volume.constData(), m_filteredVolume.data(), m_volume.width(), m_volume.height(), m_volume.depth(), windowSize, sigma);
+				GaussianFilter::gaussianFilter_cpu(m_volume.constData(), m_filteredVolume.data(), m_volume.width(), m_volume.height(), m_volume.depth(), windowSize, sigmaScaled);
 
 			auto dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 
@@ -192,17 +199,46 @@ void AnalyzeMitochondria::analyze(float sigma, ThresholdMethods thresholdMethod,
 			qDebug().nospace() << "Skeltonize (CPU): " << dur.count() << " s";
 
 			// analyse skeleton 3D
-			start = std::chrono::steady_clock::now();
+			analyzeSkeleton(m_filteredVolume, m_skeleton, useGPU, false);
+		} catch(std::exception &e) {
+			qCritical().nospace() << tr("AnalyzeMitochondria::render Error: ") + e.what();
+			emit error(tr("Rendering error"), e.what());
+		}
+	};
+
+	if (threaded)
+		QThreadPool::globalInstance()->start(func);
+	else
+		func();
+}
+
+void AnalyzeMitochondria::analyzeSkeleton(Volume filteredVolume, Volume skeleton, bool useGPU, bool threaded)
+{
+	m_filteredVolume = filteredVolume;
+	m_skeleton = skeleton;
+
+	auto func = [this,filteredVolume,skeleton,useGPU]() {
+		try {
+			// analyse skeleton 3D
+			auto start = std::chrono::steady_clock::now();
 
 			Skeleton3D::Analysis analysis;
-			auto trees = analysis.calculate(m_skeleton, {}, Skeleton3D::Analysis::NoPruning, true, 0.0, true);
+			auto trees = analysis.calculate(skeleton, {}, Skeleton3D::Analysis::NoPruning, true, 0.0, true, false);
 
 			m_labeledVolume.alloc(m_volume.width(), m_volume.height(), m_volume.depth());
 			std::fill_n(m_labeledVolume.data, m_volume.voxels(), 0);
 
-			dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
+			auto dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 
 			qDebug().nospace() << "Analyse skeleton (CPU): " << dur.count() << " s";
+
+			start = std::chrono::steady_clock::now();
+			m_hist.alloc(m_volume.width(), m_volume.height(), m_volume.depth());
+
+			Rendering::render_hist3D_gpu(m_locs, m_hist.data, m_volume.size(), m_volume.voxelSize(), m_volume.origin());
+
+			dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
+			qDebug().nospace() << "Rendering histgram (" << (useGPU ? "GPU" : "CPU") << "): " << dur.count() << " s";
 
 			/*Octree<uint32_t,float,50> tree(m_locs.bounds());
 			for (uint32_t i = 0; i < m_locs.size(); ++i)
@@ -220,49 +256,77 @@ void AnalyzeMitochondria::analyze(float sigma, ThresholdMethods thresholdMethod,
 			int id = 1;
 			for (int i = 0; i < trees.size(); ++i) {
 				const auto &t = trees[i];
-				auto [segment,voxels,box] = trees.extractVolume(m_filteredVolume, 1, i);
+				auto start2 = std::chrono::steady_clock::now();
+
+				auto [segment,voxels,box] = trees.extractVolume(filteredVolume, 1, i);
 
 				if ((box.width() <= 1) || (box.height() <= 1) || (box.depth() <= 1) || (voxels < 50)) {
 					continue;
 				}
 
+				auto dur1 = std::chrono::duration<double>(std::chrono::steady_clock::now() - start2);
+
+				start2 = std::chrono::steady_clock::now();
+
 				// draw segment to new volume and count SMLM signals
-				uint32_t signalCount = 0;
+				uint32_t signalCount1 = 0, signalCount2 = 0;
 				box.forEachVoxel([&](int x, int y, int z) {
 					if (segment(x, y, z)) {
 						segmentedVolume(x, y, z) = 255;
 						m_labeledVolume(x, y, z) = id;
-						//signalCount += static_cast<uint32_t>(tree.countInBox(m_volume.mapVoxel(x, y, z), m_volume.voxelSize()));
+						signalCount1 += m_hist(x, y, z);
+						//signalCount2 += static_cast<uint32_t>(tree.countInBox(m_volume.mapVoxel(x, y, z), m_volume.voxelSize()));
 					}
 				});
 
-				Segment s;
-				s.id = id++;
-				s.boundingBox = box;
-				s.graph = t.graph;
+				auto s = std::make_shared<Segment>();
+				s->id = id++;
+				s->boundingBox = box;
+				s->graph = t.graph;
+				s->fileName = m_fileName.toStdString();
 
 				// fill segment
-				s.data.numBranches = t.numberOfBranches;
-				s.data.numEndPoints = t.numberOfEndPoints;
-				s.data.numJunctionVoxels = t.numberOfJunctionVoxels;
-				s.data.numJunctions = t.numberOfJunctions;
-				s.data.numSlabs = t.numberOfSlabs;
-				s.data.numTriples = t.numberOfTriplePoints;
-				s.data.numQuadruples = t.numberOfQuadruplePoints;
-				s.data.averageBranchLength = t.averageBranchLength;
-				s.data.maximumBranchLength = t.maximumBranchLength;
-				s.data.shortestPath = t.shortestPath;
-				s.data.voxels = voxels;
+				s->data.numBranches = t.numberOfBranches;
+				s->data.numEndPoints = t.numberOfEndPoints;
+				s->data.numJunctionVoxels = t.numberOfJunctionVoxels;
+				s->data.numJunctions = t.numberOfJunctions;
+				s->data.numSlabs = t.numberOfSlabs;
+				s->data.numTriples = t.numberOfTriplePoints;
+				s->data.numQuadruples = t.numberOfQuadruplePoints;
+				s->data.averageBranchLength = t.averageBranchLength;
+				s->data.maximumBranchLength = t.maximumBranchLength;
+				s->data.shortestPath = t.shortestPath;
+				s->data.voxels = voxels;
 				// add 1 since bounding box calculates (max-min)
-				s.data.width = box.width() + 1;
-				s.data.height = box.height() + 1;
-				s.data.depth = box.depth() + 1;
-				s.data.signalCount = signalCount;
+				s->data.width = box.width() + 1;
+				s->data.height = box.height() + 1;
+				s->data.depth = box.depth() + 1;
+				s->data.signalCount = signalCount1;
+
+#if 0
+				auto dur2 = std::chrono::duration<double>(std::chrono::steady_clock::now() - start2);
+
+				start2 = std::chrono::steady_clock::now();
+
+				AnalyzeSegment::estimateTubeWidth(s, segment);
+				//AnalyzeSegment::estimateTubeWidth2(s, segment);
+
+				auto dur3 = std::chrono::duration<double>(std::chrono::steady_clock::now() - start2);
+#endif
 
 				for (const auto &p : t.endPoints)
-					s.endPoints.push_back(m_skeleton.mapVoxel(p.x, p.y, p.z, true));
+					s->endPoints.push_back(m_skeleton.mapVoxel(p.x, p.y, p.z, true));
+
+				s->vol = segment;
 
 				m_segments.push_back(s);
+
+#if 0
+				qDebug() << i << trees.size() << s->data.meanTubeWidth
+							<< "extractVolume" << dur1.count() << "s"
+							<< "draw segments" << dur2.count() << "s"
+							<< "estimateTubeWidth" << dur3.count() << "s";
+#endif
 
 				emit progressChanged(i);
 			}
@@ -274,7 +338,7 @@ void AnalyzeMitochondria::analyze(float sigma, ThresholdMethods thresholdMethod,
 			emit volumeAnalyzed();
 		} catch(std::exception &e) {
 			qCritical().nospace() << tr("AnalyzeMitochondria::render Error: ") + e.what();
-			emit error(tr("Rendering error"), e.what());
+			emit error(tr("Analyze skeleton error"), e.what());
 		}
 	};
 
@@ -303,15 +367,15 @@ void AnalyzeMitochondria::classify(bool threaded)
 
 			emit progressRangeChanged(0, static_cast<int>(m_segments.size())-1);
 			for (size_t i = 0; i < m_segments.size(); ++i) {
-				cv::Mat dataSet(1, 14, CV_32FC1, &m_segments[i].data);
+				cv::Mat dataSet(1, 14, CV_32FC1, &m_segments[i]->data);
 				m_dtree->predict(dataSet, result, 0);
 
 				const int prediction = qRound(result.at<float>(0, 0));
 
-				m_segments[i].prediction = prediction;
+				m_segments[i]->prediction = prediction;
 
-				m_segments[i].boundingBox.forEachVoxel([&](int x, int y, int z) {
-					if (m_labeledVolume(x, y, z) == m_segments[i].id) {
+				m_segments[i]->boundingBox.forEachVoxel([&](int x, int y, int z) {
+					if (m_labeledVolume(x, y, z) == m_segments[i]->id) {
 						m_classifiedVolume(x, y, z) = prediction;
 						hist[prediction]++;
 						++numVoxels;
