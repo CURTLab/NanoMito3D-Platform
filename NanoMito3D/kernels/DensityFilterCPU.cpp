@@ -23,9 +23,36 @@
 #include "DensityFilter.h"
 
 #include "Octree.h"
+#include "3dparty/CompactNSearch/CompactNSearch.h"
+
+using namespace CompactNSearch;
 
 Localizations::const_iterator DensityFilter::remove_cpu(Localizations &locs, size_t minPoints, float radius)
 {
+#if 0
+	const size_t nLocs = locs.size();
+
+	std::unique_ptr<float[]> pts(new float[nLocs * 3]);
+	for (size_t i = 0; i < nLocs; ++i) {
+		pts[3*i + 0] = locs[i].x;
+		pts[3*i + 1] = locs[i].y;
+		pts[3*i + 2] = locs[i].z;
+	}
+
+	NeighborhoodSearch nsearch(radius);
+
+	auto pointSetIndex = nsearch.add_point_set(pts.get(), nLocs, false, true);
+	nsearch.find_neighbors();
+
+	auto &pointSet = nsearch.point_set(pointSetIndex);
+
+	const auto ret = std::remove_if(locs.begin(), locs.end(), [&locs,&pointSet,minPoints](const Localization &l) -> bool {
+		const uint32_t idx = static_cast<uint32_t>(&l - locs.data());
+		return pointSet.n_neighbors(0, idx) < minPoints;
+	});
+
+	return ret;
+#else
 	// filter by density
 	Octree<uint32_t,float,50> tree(locs.bounds());
 	for (uint32_t i = 0; i < locs.size(); ++i)
@@ -37,4 +64,5 @@ Localizations::const_iterator DensityFilter::remove_cpu(Localizations &locs, siz
 		const auto pts = tree.countInSphere(l.position(), radius);
 		return pts < minPoints;
 	});
+#endif
 }

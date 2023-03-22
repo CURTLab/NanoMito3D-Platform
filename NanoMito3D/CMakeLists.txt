@@ -22,6 +22,7 @@ find_package(CUDA 7.0 REQUIRED)
 find_package(HDF5)
 
 add_subdirectory(3dparty/cuNSearch)
+add_subdirectory(3dparty/CompactNSearch)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../common ${CMAKE_CURRENT_BINARY_DIR}/common)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../widgets ${CMAKE_CURRENT_BINARY_DIR}/widgets)
 
@@ -70,6 +71,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
         ${VTK_LIBRARIES}
         ${OpenCV_LIBS}
         cuNSearch
+        CompactNSearch
         Common
         Widgets
 )
