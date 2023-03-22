@@ -90,7 +90,7 @@ Localizations::const_iterator DensityFilter::remove_gpu(Localizations &locs, siz
 {
 	const size_t nLocs = locs.size();
 
-	float *pts = new float[nLocs * 3];
+	std::unique_ptr<float[]> pts(new float[nLocs * 3]);
 	for (size_t i = 0; i < nLocs; ++i) {
 		pts[3*i + 0] = locs[i].x;
 		pts[3*i + 1] = locs[i].y;
@@ -100,7 +100,7 @@ Localizations::const_iterator DensityFilter::remove_gpu(Localizations &locs, siz
 	cuNSearch::NeighborhoodSearch nsearch(radius);
 
 	//Add point set from the test data
-	auto pointSetIndex = nsearch.add_point_set(pts, nLocs, false, true);
+	auto pointSetIndex = nsearch.add_point_set(pts.get(), nLocs, false, true);
 	nsearch.find_neighbors();
 
 	auto &pointSet = nsearch.point_set(pointSetIndex);
