@@ -28,4 +28,4 @@ target_link_libraries(Widgets
     ${OpenCV_LIBS}
 )
 
-target_compile_definitions(Widgets PUBLIC $<$<CONFIG:DEBUG>:DEBUG> -DQWT_DLL)
+target_compile_definitions(Widgets PUBLIC $<$<CONFIG:DEBUG>:DEBUG>)

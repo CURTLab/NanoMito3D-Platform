@@ -89,4 +89,5 @@ if (QWT_FOUND AND NOT TARGET Qwt::Qwt)
         INTERFACE_INCLUDE_DIRECTORIES "${QWT_INCLUDE_DIRS}"
         DEFINE_SYMBOL -DQWT_DLL
       )
+    target_compile_definitions(Qwt::Qwt INTERFACE -DQWT_DLL)
 endif ()

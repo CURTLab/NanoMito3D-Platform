@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2022 Fabian Hauser
+ * Copyright (C) 2022 - 2023 Fabian Hauser
  *
  * Author: Fabian Hauser <fabian.hauser@fh-linz.at>
  * University of Applied Sciences Upper Austria - Linz - Austra
@@ -22,6 +22,7 @@
 
 #include "MatPlotWidget.h"
 
+#include <QPainter>
 #include <QVBoxLayout>
 #include <qwt_plot.h>
 #include <qwt_plot_item.h>
@@ -35,6 +36,7 @@
 #include <qwt_plot_histogram.h>
 #include <qwt_column_symbol.h>
 #include <qwt_symbol.h>
+#include <qwt_scale_map.h>
 
 class MatPlotLabelScaleDraw : public QwtScaleDraw
 {
