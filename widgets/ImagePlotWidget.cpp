@@ -25,22 +25,28 @@
 #include <QVBoxLayout>
 #include <QApplication>
 #include <QtMath>
+#include <QPainter>
+#include <QPainterPath>
 
 #include <qwt_plot.h>
 #include <qwt_plot_layout.h>
 #include <qwt_scale_widget.h>
+#include <qwt_scale_map.h>
 #include <qwt_painter.h>
 #include <qwt_plot_spectrogram.h>
 #include <qwt_plot_rescaler.h>
 #include <qwt_color_map.h>
 #include <qwt_plot_canvas.h>
 #include <qwt_plot_shapeitem.h>
+#include <qwt_interval.h>
 
 class ImagePlotRasterData : public QwtRasterData
 {
 	cv::Mat m_image;
+	QwtInterval m_zInterval;
 public:
 	inline ImagePlotRasterData(const cv::Mat &image, QwtInterval interval)
+		: m_zInterval(0, 1000)
 	{ setData(image, interval); }
 
 	virtual inline double value(double x, double y) const override {
@@ -49,24 +55,38 @@ public:
 
 	inline constexpr const cv::Mat &image() const { return m_image; }
 
-	inline void setData(const cv::Mat &image, QwtInterval interval) {
+	inline void setData(const cv::Mat &image, const QwtInterval &zInterval) {
 		image.convertTo(m_image, CV_64F);
+		updateScale(zInterval);
+#if QWT_VERSION < 0x060200
 		setInterval(Qt::XAxis, QwtInterval(0, image.rows-1E-9));
 		setInterval(Qt::YAxis, QwtInterval(0, image.cols-1E-9));
-		setInterval(Qt::ZAxis, interval);
+#endif
 	}
 
-	inline void updateScale(double min, double max)
+	inline void updateScale(const QwtInterval &zInterval)
 	{
-		setInterval(Qt::ZAxis, {min, max});
+		m_zInterval = zInterval;
+#if QWT_VERSION < 0x060200
+		setInterval(Qt::ZAxis, m_zInterval);
+#endif
 	}
 
 	inline void clear() {
 		m_image = cv::Mat{};
-		setInterval(Qt::XAxis, QwtInterval(0, 1));
-		setInterval(Qt::YAxis, QwtInterval(0, 1));
-		setInterval(Qt::ZAxis, QwtInterval(0, 1000));
+		updateScale(QwtInterval(0, 1000));
 	}
+
+#if QWT_VERSION >= 0x060200
+	inline virtual QwtInterval interval(Qt::Axis axis) const override {
+		switch (axis) {
+		case Qt::XAxis: return m_image.empty() ? QwtInterval{0.0, 1.0} : QwtInterval{0, m_image.rows-1E-9};
+		case Qt::YAxis: return m_image.empty() ? QwtInterval{0.0, 1.0} : QwtInterval{0, m_image.cols-1E-9};
+		case Qt::ZAxis: return m_zInterval;
+		}
+		return {};
+	}
+#endif
 
 };
 
@@ -89,7 +109,11 @@ public:
 protected:
 	virtual inline void drawTrack(QPainter *) const {}
 
-	virtual inline void drawBackbone(QPainter *p) const override {
+	virtual inline void drawBackbone(QPainter *) const override {}
+
+	virtual inline void drawLabel(QPainter *p, double value) const override {
+		p->setRenderHints(QPainter::TextAntialiasing|QPainter::Antialiasing, true);
+
 		p->save();
 		p->setRenderHint(QPainter::Antialiasing, true);
 
@@ -101,7 +125,7 @@ protected:
 		QPen pen(colorFG, 0); // zero width pen is cosmetic pen
 		p->setPen(pen);
 
-		const double ext = extent(QFont());
+		double ext = extent(QFont());
 		QRectF rulerRect;
 		switch (alignment()) {
 		case RightScale:
@@ -120,12 +144,7 @@ protected:
 		p->fillRect(rulerRect, colorBG);
 		p->drawRect(rulerRect);
 		p->restore();
-	}
 
-	virtual inline void drawLabel(QPainter *p, double value) const override {
-		p->setRenderHints(QPainter::TextAntialiasing|QPainter::Antialiasing, true);
-
-		const QPalette palette = qApp->palette();
 		QColor color;
 		color = palette.color(QPalette::ButtonText);
 
@@ -137,7 +156,7 @@ protected:
 		QFont font = p->font();
 		font.setPointSizeF(8);
 
-		const double ext = extent(font);
+		ext = extent(font);
 		QwtText lbl = tickLabel(font, value * m_unitScale);
 		if (lbl.isEmpty())
 			return;
