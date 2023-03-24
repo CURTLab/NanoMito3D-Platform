@@ -27,17 +27,17 @@
 
 void GaussianFilter::gaussianFilter_cpu(const uint8_t *input, uint8_t *output, int width, int height, int depth, int size, std::array<float,3> sigma)
 {
-	cv::Mat kernel = cv::getGaussianKernel(size, sigma[0], CV_32F);
-
+	// kernel for z convolution
+	cv::Mat kernel = cv::getGaussianKernel(size, sigma[2], CV_32F);
 
 	const size_t stride[3] = {1ull, static_cast<size_t>(width), static_cast<size_t>(width) * static_cast<size_t>(height)};
 	const auto idx = [&](int x, int y, int z) -> size_t { return stride[0] * static_cast<size_t>(x) + stride[1] * static_cast<size_t>(y) + stride[2] * static_cast<size_t>(z); };
 
-	// first pass
+	// first pass, xy convolution
 	for (int i = 0; i < depth; ++i) {
 		cv::Mat in(width, height, CV_8U, (void*)(input + idx(0,0,i)));
 		cv::Mat out(width, height, CV_8U, (void*)(output + idx(0,0,i)));
-		cv::GaussianBlur(in, out, {size, size}, sigma[0], sigma[0]);
+		cv::GaussianBlur(in, out, {size, size}, sigma[1], sigma[0]);
 	}
 
 	// 1d convolution in z directions
