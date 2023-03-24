@@ -37,6 +37,7 @@
 #include <qwt_column_symbol.h>
 #include <qwt_symbol.h>
 #include <qwt_scale_map.h>
+#include <qwt_plot_curve.h>
 
 class MatPlotLabelScaleDraw : public QwtScaleDraw
 {
@@ -261,6 +262,37 @@ void MatPlotWidget::bar(const QStringList &values, const QVector<double> &height
 
 	d->axisWidget(QwtPlot::xBottom)->setScaleDraw(new MatPlotLabelScaleDraw(values));
 	d->setAxisScale(QwtPlot::xBottom, -1, height.size(), 1.0);
+
+	d->replot();
+}
+
+void MatPlotWidget::plot(const QVector<QPointF> &points, QColor color, CurveStyle style, double width)
+{
+	Q_D(MatPlotWidget);
+
+	QwtPlotCurve *curve = new QwtPlotCurve;
+	curve->setSamples(points);
+	curve->setRenderHint(QwtPlotItem::RenderAntialiased, true);
+
+	const int size = qRound(width);
+	if (style == CurveStyle::Dots) {
+		curve->setStyle(QwtPlotCurve::Dots);
+		curve->setPen(color, width);
+	} else if (style == CurveStyle::Circles) {
+		QColor c(color);
+		c.setAlpha(150);
+		curve->setStyle(QwtPlotCurve::NoCurve);
+		curve->setSymbol(new QwtSymbol(QwtSymbol::Ellipse, QBrush(c), color, QSize(size, size)));
+	} else if (style == CurveStyle::Cross) {
+		curve->setStyle(QwtPlotCurve::NoCurve);
+		curve->setSymbol(new QwtSymbol(QwtSymbol::XCross, Qt::NoBrush, QPen(color, 1.75), QSize(size, size)));
+	} else if (style == CurveStyle::DotLine) {
+		curve->setPen(color, width, Qt::DotLine);
+	} else {
+		curve->setPen(color, width);
+	}
+
+	curve->attach(d);
 
 	d->replot();
 }

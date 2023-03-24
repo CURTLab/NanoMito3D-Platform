@@ -25,6 +25,14 @@
 
 #include <QWidget>
 
+enum class CurveStyle {
+	Curve,
+	Dots,
+	Circles,
+	Cross,
+	DotLine
+};
+
 class MatPlotWidgetPrivate;
 
 class MatPlotWidget : public QWidget
@@ -35,6 +43,7 @@ public:
 
 	void hist(const QVector<double> &values, double min, double max, int nbins = 100);
 	void bar(const QStringList &values, const QVector<double> &height, const QVector<QColor> &colors, double width = 0.8);
+	void plot(const QVector<QPointF> &points, QColor color = Qt::red, CurveStyle style = CurveStyle::Curve, double width = 0.8);
 
 	void replot();
 	void clear();
