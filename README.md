@@ -1,7 +1,7 @@
 # NanoMito3D-Platform
 
 NanoMito3D-Platform contains software applications for:
- * CellCounterApp: Automated cell counting from phase constrast image
+ * CellCounterApp: Deep Learning assisted cell counting from phase constrast images
  * BleedThroughCorrection: Fluorescent bleed-through correction from two-color 3D single molecule localization microscopy files
  * NanoMito3D: 3D mitochondrial network analysis with GPU acceleration from (multicolor) 3D single molecule localization microscopy files
  
@@ -19,13 +19,17 @@ NanoMito3D-Platform contains software applications for:
 ## BleedThroughCorrection Application
 ![Thumbnail](https://raw.githubusercontent.com/CURTLab/NanoMito3D-Platform/main/thumbnail_bleedthroughcorr.PNG)
 
+# 3rd-party libaries:
+* [cuNSearch](https://github.com/InteractiveComputerGraphics/cuNSearch)
+* [CompactNSearch](https://github.com/InteractiveComputerGraphics/CompactNSearch)
+
 # Tested prerequisites for compilation
 * Windows 10
 * Visual Studio 2019
-* QT 5.15.2
+* QT 5.15.2/6.4.2
 * OpenCV 4.5.5
-* VTK 9.0
-* Qwt 6.1.6
+* VTK 9.0/9.2.6
+* Qwt 6.1.6/6.2.0
 * protobuf 3.21.9
 * CUDA 7.0
 * CMake 3.18.1
