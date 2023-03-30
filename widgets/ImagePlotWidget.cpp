@@ -75,6 +75,10 @@ public:
 	inline void clear() {
 		m_image = cv::Mat{};
 		updateScale(QwtInterval(0, 1000));
+#if QWT_VERSION < 0x060200
+		setInterval(Qt::XAxis, {0.0, 1.0});
+		setInterval(Qt::YAxis, {0.0, 1.0});
+#endif
 	}
 
 #if QWT_VERSION >= 0x060200
