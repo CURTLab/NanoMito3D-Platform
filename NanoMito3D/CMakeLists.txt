@@ -15,7 +15,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
-find_package(VTK 8.0 REQUIRED COMPONENTS GUISupportQt RenderingVolumeOpenGL2 CommonComputationalGeometry RenderingAnnotation)
+find_package(VTK 8.0 REQUIRED COMPONENTS GUISupportQt RenderingVolumeOpenGL2 CommonComputationalGeometry RenderingAnnotation IOExport)
 find_package(OpenCV REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(CUDA 7.0 REQUIRED)

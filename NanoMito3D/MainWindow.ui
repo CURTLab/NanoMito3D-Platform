@@ -393,6 +393,7 @@
      </property>
      <addaction name="actionExportVolume"/>
      <addaction name="actionExportFilteredVolume"/>
+     <addaction name="actionExportRenderer"/>
     </widget>
     <addaction name="menuExport"/>
    </widget>
@@ -413,6 +414,11 @@
    </property>
    <property name="text">
     <string>Filtered volume ...</string>
+   </property>
+  </action>
+  <action name="actionExportRenderer">
+   <property name="text">
+    <string>3D Renderer ...</string>
    </property>
   </action>
  </widget>

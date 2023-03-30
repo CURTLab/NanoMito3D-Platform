@@ -58,6 +58,9 @@
 #include <vtkDiscreteMarchingCubes.h>
 #include <vtkLookupTable.h>
 
+#include <vtkWindowToImageFilter.h>
+#include <vtkPNGWriter.h>
+
 class VolumeWidgetPrivate : public QVTKOpenGLNativeWidget
 {
 public:
@@ -82,7 +85,7 @@ public:
 		return imageData;
 	}
 
-	inline void addCubeActor(vtkSmartPointer<vtkStructuredPoints> imageData)
+	inline void addCubeActor(double *bounds)
 	{
 		vtkNew<vtkCubeAxesActor> cubeAxesActor;
 
@@ -91,7 +94,7 @@ public:
 		cubeAxesActor->SetZLabelFormat("%-#3.1f");
 
 		cubeAxesActor->SetUseTextActor3D(1);
-		cubeAxesActor->SetBounds(imageData->GetBounds());
+		cubeAxesActor->SetBounds(bounds);
 		cubeAxesActor->SetCamera(renderer->GetActiveCamera());
 		cubeAxesActor->SetXTitle("X / µm");
 		cubeAxesActor->SetYTitle("Y / µm");
@@ -104,9 +107,9 @@ public:
 		vtkNew<vtkStringArray> axisLabels;
 		vtkStdString s;
 		s.resize(64);
-		snprintf(s.data(), 64, "%3.1f", imageData->GetBounds()[4]);
+		snprintf(s.data(), 64, "%3.1f", bounds[4]);
 		axisLabels->InsertNextValue(s);
-		snprintf(s.data(), 64, "%3.1f", imageData->GetBounds()[5]);
+		snprintf(s.data(), 64, "%3.1f", bounds[5]);
 		axisLabels->InsertNextValue(s);
 		cubeAxesActor->SetAxisLabels(2, axisLabels);
 #endif
@@ -170,7 +173,15 @@ void VolumeWidget::clear()
 	d->renderWindow()->Render();
 }
 
-void VolumeWidget::setVolume(Volume volume, std::array<double, 4> color, bool copyData)
+void VolumeWidget::setBounds(double bounds[6])
+{
+	Q_D(VolumeWidget);
+
+	d->addCubeActor(bounds);
+	d->renderWindow()->Render();
+}
+
+void VolumeWidget::addVolume(Volume volume, std::array<double, 4> color, bool copyData)
 {
 	Q_D(VolumeWidget);
 
@@ -199,10 +210,47 @@ void VolumeWidget::setVolume(Volume volume, std::array<double, 4> color, bool co
 	vol->SetMapper(volumeMapper);
 	vol->SetProperty(volumeProperty);
 
-	d->addCubeActor(imageData);
+	d->addCubeActor(imageData->GetBounds());
 
 	d->renderer->AddViewProp(vol);
-	d->renderer->ResetCamera();
+	d->renderWindow()->Render();
+}
+
+void VolumeWidget::addLocalizations(const Localizations &locs, float pointSize, std::array<double, 3> color)
+{
+	Q_D(VolumeWidget);
+
+	vtkNew<vtkPoints> pts;
+	vtkNew<vtkCellArray> verts;
+	for (const auto &l : locs) {
+		auto idx = pts->InsertNextPoint(l.x * 1E-3, l.y * 1E-3, l.z * 1E-3);
+		verts->InsertNextCell(1);
+		verts->InsertCellPoint(idx);
+	}
+
+	vtkNew<vtkPolyData> polydata;
+	polydata->SetPoints(pts);
+	polydata->SetVerts(verts);
+
+	// Create mapper and actor
+	vtkNew<vtkPolyDataMapper> mapper;
+	mapper->SetInputData(polydata);
+
+	vtkNew<vtkActor> actor;
+	actor->GetProperty()->SetPointSize(pointSize);
+	actor->GetProperty()->SetColor(color[0], color[1], color[2]);
+	actor->SetMapper(mapper);
+
+	double bounds[6] = {0};
+	// (xmin,xmax, ymin,ymax, zmin,zmax)
+	bounds[1] = locs.width() * 1E-3;
+	bounds[3] = locs.height() * 1E-3;
+	bounds[4] = locs.minZ() * 1E-3;
+	bounds[5] = locs.maxZ() * 1E-3;
+
+	d->addCubeActor(bounds);
+
+	d->renderer->AddActor(actor);
 	d->renderWindow()->Render();
 }
 
@@ -235,7 +283,6 @@ void VolumeWidget::addSpheres(const std::vector<std::array<float, 3> > &points, 
 	ballActor->GetProperty()->SetColor(color[0], color[1], color[2]);
 
 	d->renderer->AddActor(ballActor);
-	d->renderer->ResetCamera();
 	d->renderWindow()->Render();
 }
 
@@ -290,7 +337,6 @@ void VolumeWidget::addGraph(std::shared_ptr<SkeletonGraph> graph, const Volume &
 
 		d->renderer->AddActor(actor);
 	}
-	d->renderer->ResetCamera();
 	d->renderWindow()->Render();
 }
 
@@ -323,9 +369,38 @@ void VolumeWidget::addClassifiedVolume(Volume volume, int classes, bool copyData
 	vtkNew<vtkActor> actor;
 	actor->SetMapper(mapper);
 
-	d->addCubeActor(imageData);
+	d->addCubeActor(imageData->GetBounds());
 
 	d->renderer->AddActor(actor);
+	d->renderWindow()->Render();
+}
+
+void VolumeWidget::saveAsPNG(const QString &fileName)
+{
+	Q_D(VolumeWidget);
+
+	vtkNew<vtkWindowToImageFilter> wti;
+	wti->SetInput(d->renderWindow());
+	wti->SetInputBufferTypeToRGB();
+	//wti->SetScale(2, 2);
+	wti->ReadFrontBufferOff();
+	wti->Update();
+
+	vtkNew<vtkPNGWriter> png;
+	png->SetFileName(qPrintable(fileName));
+	png->SetInputConnection(wti->GetOutputPort());
+	png->Write();
+}
+
+void VolumeWidget::resetCamera()
+{
+	Q_D(VolumeWidget);
 	d->renderer->ResetCamera();
+	d->renderWindow()->Render();
+}
+
+void VolumeWidget::replot()
+{
+	Q_D(VolumeWidget);
 	d->renderWindow()->Render();
 }

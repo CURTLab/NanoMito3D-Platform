@@ -76,6 +76,14 @@ MainWindow::MainWindow(QWidget *parent)
 		exportVolumeDialog(m_analyis.filteredVolume(), "filtered volume");
 	});
 
+	connect(m_ui->actionExportRenderer, &QAction::triggered,
+			  this, [this]() {
+		QString fileName = QFileDialog::getSaveFileName(this, tr("Export Renderer"), "", "Image (*.png)");
+		if (fileName.isEmpty())
+			return;
+		m_ui->volumeView->saveAsPNG(fileName);
+	});
+
 	connect(&m_analyis, &AnalyzeMitochondria::progressRangeChanged,
 			  m_bar, &QProgressBar::setRange);
 
@@ -121,6 +129,9 @@ MainWindow::MainWindow(QWidget *parent)
 			m_ui->comboChannel->setEnabled(false);
 		}
 		m_ui->frame->setEnabled(true);
+
+		m_ui->volumeView->addLocalizations(m_analyis.localizations(), 1.2f, {0,0,1});
+		m_ui->volumeView->resetCamera();
 	});
 
 	// volume rendering section
@@ -139,7 +150,7 @@ MainWindow::MainWindow(QWidget *parent)
 		m_ui->buttonAnalyse->setEnabled(true);
 		m_ui->statusbar->showMessage(tr("Rendered volume successfully!"));
 		m_ui->volumeView->clear();
-		m_ui->volumeView->setVolume(m_analyis.volume(), {0, 0, 1, 255});
+		m_ui->volumeView->addVolume(m_analyis.volume(), {0, 0, 1, 255});
 		m_ui->frame->setEnabled(true);
 		m_ui->actionExportVolume->setEnabled(true);
 		m_bar->setVisible(false);
@@ -162,7 +173,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 		m_ui->buttonClassify->setEnabled(true);
 		m_ui->volumeView->clear();
-		m_ui->volumeView->setVolume(segments.volume, {0., 0., 1., 0.4});
+		m_ui->volumeView->addVolume(segments.volume, {0., 0., 1., 0.4});
 		std::vector<std::array<float,3>> endPoints;
 		for (const auto &s : segments) {
 			m_ui->volumeView->addGraph(s->graph, segments.volume, 0.5f * r, {0.f, 1.f, 0.f});

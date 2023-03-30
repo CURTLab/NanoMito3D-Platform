@@ -27,6 +27,7 @@
 
 #include "Volume.h"
 #include "SkeletonGraph.h"
+#include "Localizations.h"
 
 class VolumeWidgetPrivate;
 
@@ -39,10 +40,21 @@ public:
 	~VolumeWidget();
 
 	void clear();
-	void setVolume(Volume volume, std::array<double,4> color, bool copyData = true);
+
+	// sets the bounds and axis annotations to the bounds in µm (xmin,xmax, ymin,ymax, zmin,zmax)
+	void setBounds(double bounds[6]);
+
+	void addVolume(Volume volume, std::array<double,4> color, bool copyData = true);
+	void addLocalizations(const Localizations &locs, float pointSize, std::array<double,3> color);
 	void addSpheres(const std::vector<std::array<float,3>> &points, float r, std::array<double,3> color);
 	void addGraph(std::shared_ptr<SkeletonGraph> graph, const Volume &volume, float r, std::array<double,3> color);
 	void addClassifiedVolume(Volume volume, int classes, bool copyData = true);
+
+	void saveAsPNG(const QString &fileName);
+
+public slots:
+	void resetCamera();
+	void replot();
 
 private:
 	VolumeWidgetPrivate * const m_d;

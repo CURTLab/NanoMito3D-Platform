@@ -48,12 +48,24 @@ public:
 
 	void load(const std::string &fileName, std::function<void(uint32_t,uint32_t,const Localization &)> cb);
 
+	// returns width of the localizations in nm
 	inline constexpr float width() const { return m_width * m_pixelSize; }
+
+	// returns height of the localizations in nm
 	inline constexpr float height() const { return m_height * m_pixelSize; }
+
+	// returns depth of the localizations in nm
 	inline constexpr float depth() const { return m_maxZ - m_minZ; }
+
+	// returns orignal pixel size of acquired frames in nm
 	inline constexpr float pixelSize() const { return m_pixelSize; }
+
+	// returns lowest axial postion found in localization dataset in nm
 	inline constexpr float minZ() const { return m_minZ; }
+
+	// returns highest axial postion found in localization dataset in nm
 	inline constexpr float maxZ() const { return m_maxZ; }
+
 	inline constexpr int numFrames() const { return m_numFrames-1; }
 
 	inline constexpr Bounds<float> bounds() const {
