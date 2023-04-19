@@ -31,12 +31,12 @@ void GaussianFilter::gaussianFilter_cpu(const uint8_t *input, uint8_t *output, i
 	cv::Mat kernel = cv::getGaussianKernel(size, sigma[2], CV_32F);
 
 	const size_t stride[3] = {1ull, static_cast<size_t>(width), static_cast<size_t>(width) * static_cast<size_t>(height)};
-	const auto idx = [&](int x, int y, int z) -> size_t { return stride[0] * static_cast<size_t>(x) + stride[1] * static_cast<size_t>(y) + stride[2] * static_cast<size_t>(z); };
+	const auto idx = [&](int x, int y, int z) -> size_t { return stride[0] * x + stride[1] * y + stride[2] * z; };
 
 	// first pass, xy convolution
 	for (int i = 0; i < depth; ++i) {
-		cv::Mat in(width, height, CV_8U, (void*)(input + idx(0,0,i)));
-		cv::Mat out(width, height, CV_8U, (void*)(output + idx(0,0,i)));
+		cv::Mat in(height, width, CV_8U, (void*)(input + idx(0,0,i)));
+		cv::Mat out(height, width, CV_8U, (void*)(output + idx(0,0,i)));
 		cv::GaussianBlur(in, out, {size, size}, sigma[1], sigma[0]);
 	}
 
