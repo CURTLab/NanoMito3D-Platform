@@ -32,8 +32,6 @@
 #include <opencv2/opencv.hpp>
 #include <filesystem>
 
-#include "Device.h"
-
 class VolumeData
 {
 public:
@@ -42,8 +40,7 @@ public:
 		, voxelSize{1.f, 1.f, 1.f}
 		, origin{0.f, 0.f, 0.f}
 		, voxels(0)
-		, hData(nullptr)
-		, dData(nullptr)
+		, data(nullptr)
 	{
 	}
 
@@ -53,20 +50,16 @@ public:
 		, origin(origin)
 		, stride{1ull, static_cast<size_t>(dims[0]), static_cast<size_t>(dims[0]) * dims[1]}
 		, voxels(static_cast<size_t>(dims[0]) * dims[1] * dims[2])
-		, hData(nullptr)
-		, dData(nullptr)
+		, data(nullptr)
 	{
-		hData = new uint8_t[voxels];
-		if (hData == nullptr)
+		data = new uint8_t[voxels];
+		if (data == nullptr)
 			throw std::runtime_error("Couldn't allocate data for volume!");
 	}
 
 	inline ~VolumeData() {
-		delete [] hData;
-		hData = nullptr;
-
-		cudaFree(dData);
-		dData = nullptr;
+		delete [] data;
+		data = nullptr;
 	}
 
 	inline constexpr bool inBounds(int x, int y, int z) const
@@ -81,10 +74,7 @@ public:
 	std::array<size_t, 3> stride;
 
 	size_t voxels;
-	// host pointer, main data
-	uint8_t* hData;
-	// device data for cuda
-	uint8_t *dData;
+	uint8_t* data;
 
 };
 
@@ -122,7 +112,7 @@ Volume &Volume::operator=(const Volume &other)
 
 void Volume::fill(uint8_t value)
 {
-	std::fill_n(d->hData, d->voxels, value);
+	std::fill_n(d->data, d->voxels, value);
 }
 
 Volume Volume::loadTif(const std::string &fileName, std::array<float, 3> voxelSize, std::array<float, 3> origin)
@@ -167,7 +157,7 @@ void Volume::saveTif(const std::string &fileName) const
 {
 	std::vector<cv::Mat> stack(d->dims[2]);
 	for (int z = 0; z < d->dims[2]; ++z)
-		stack[z] = cv::Mat(d->dims[1], d->dims[0], CV_8U, d->hData + d->idx(0, 0, z));
+		stack[z] = cv::Mat(d->dims[1], d->dims[0], CV_8U, d->data + d->idx(0, 0, z));
 
 	if (!cv::imwritemulti(fileName, stack))
 		throw std::runtime_error("Could not save tif stack at " + fileName);
@@ -198,7 +188,7 @@ Volume Volume::loadH5(const std::string &fileName, std::string name)
 	H5Aclose(aid2);
 
 	Volume ret({(int)dims[2], (int)dims[1], (int)dims[0]}, voxelSize, origin);
-	H5Dread(dataset, H5T_NATIVE_UINT8, H5S_ALL, H5S_ALL, H5P_DEFAULT, ret.d->hData);
+	H5Dread(dataset, H5T_NATIVE_UINT8, H5S_ALL, H5S_ALL, H5P_DEFAULT, ret.d->data);
 
 	H5Sclose(vSpaceId);
 	H5Dclose(dataset);
@@ -238,7 +228,7 @@ bool Volume::saveH5(const std::string &fileName, std::string name, bool truncate
 		H5Fclose(file);
 	}
 
-	int err = H5Dwrite(dataset, H5T_NATIVE_UINT8, H5S_ALL, H5S_ALL, H5P_DEFAULT, d->hData);
+	int err = H5Dwrite(dataset, H5T_NATIVE_UINT8, H5S_ALL, H5S_ALL, H5P_DEFAULT, d->data);
 
 	hsize_t adim[1] = {3};
 
@@ -270,25 +260,25 @@ bool Volume::saveH5(const std::string &fileName, std::string name, bool truncate
 
 uint8_t Volume::value(int x, int y, int z, uint8_t defaultVal) const
 {
-	return d->inBounds(x, y, z) ? d->hData[d->idx(x, y, z)] : defaultVal;
+	return d->inBounds(x, y, z) ? d->data[d->idx(x, y, z)] : defaultVal;
 }
 
 void Volume::setValue(int x, int y, int z, uint8_t value)
 {
 	if (d->inBounds(x, y, z))
-		d->hData[d->idx(x, y, z)] = value;
+		d->data[d->idx(x, y, z)] = value;
 }
 
 uint8_t &Volume::operator()(int x, int y, int z)
 {
 	assert(d->inBounds(x, y, z) && "out of bounds");
-	return d->hData[d->idx(x, y, z)];
+	return d->data[d->idx(x, y, z)];
 }
 
 const uint8_t &Volume::operator()(int x, int y, int z) const
 {
 	assert(d->inBounds(x, y, z) && "out of bounds");
-	return d->hData[d->idx(x, y, z)];
+	return d->data[d->idx(x, y, z)];
 }
 
 int Volume::width() const noexcept
@@ -326,50 +316,14 @@ const std::array<float,3> &Volume::origin() const noexcept
 	return d->origin;
 }
 
-bool Volume::copyTo(DeviceType device)
+uint8_t *Volume::data()
 {
-	if (device == DeviceType::Device) {
-		if (d->dData == nullptr) {
-			cudaMalloc((void**)&d->dData, d->voxels);
-			GPU::cudaCheckError();
-		}
-		if (cudaMemcpy(d->dData, d->hData, d->voxels, cudaMemcpyHostToDevice) != cudaSuccess)
-			throw std::runtime_error("Could not copy localizations from host to device!");
-		return true;
-	} else if (device == DeviceType::Host) {
-		if (d->dData == nullptr)
-			throw std::runtime_error("No device data allocated!");
-		if (cudaMemcpy(d->hData, d->dData, d->voxels, cudaMemcpyDeviceToHost) != cudaSuccess)
-			throw std::runtime_error("Could not copy localizations from device to host!");
-		return true;
-	}
-	return false;
+	return d->data;
 }
 
-uint8_t *Volume::alloc(DeviceType device)
+const uint8_t *Volume::constData() const noexcept
 {
-	if (device == DeviceType::Device) {
-		if (d->dData == nullptr) {
-			if (cudaMalloc((void**)&d->dData, d->voxels) != cudaSuccess)
-				throw std::runtime_error("Could allocate device memory!");
-		}
-		return d->dData;
-	} else if (device == DeviceType::Host) {
-		return d->hData;
-	}
-	return nullptr;
-}
-
-uint8_t *Volume::data(DeviceType device)
-{
-	if ((device == DeviceType::Device) && (d->dData == nullptr))
-		throw std::runtime_error("No device data allocated!");
-	return device == DeviceType::Device ? d->dData : d->hData;
-}
-
-const uint8_t *Volume::constData(DeviceType device) const noexcept
-{
-	return device == DeviceType::Device ? d->dData : d->hData;
+	return d->data;
 }
 
 bool Volume::contains(int x, int y, int z) const
@@ -384,7 +338,7 @@ size_t Volume::countDifferences(const Volume &other) const
 
 	size_t diff = 0;
 	for (size_t i = 0; i < d->voxels; ++i)
-		diff += (d->hData[i] != other.d->hData[i]);
+		diff += (d->data[i] != other.d->data[i]);
 	return diff;
 }
 
@@ -419,7 +373,7 @@ std::array<uint32_t, 256> Volume::hist() const
 	std::fill(hist.begin(), hist.end(), uint32_t(0));
 
 	for (size_t i = 0; i < d->voxels; ++i)
-		hist[d->hData[i]]++;
+		hist[d->data[i]]++;
 	return hist;
 }
 

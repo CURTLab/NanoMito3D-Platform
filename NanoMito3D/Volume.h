@@ -27,8 +27,6 @@
 #include <array>
 #include <string>
 
-#include "Types.h"
-
 class VolumeData;
 
 class Volume final
@@ -83,17 +81,9 @@ public:
 	const std::array<float,3> &voxelSize() const noexcept;
 	const std::array<float,3> &origin() const noexcept;
 
-	// copy data:
-	// * DeviceType::Host: device to host (if device data is allocated)
-	// * DeviceType::Device: host to device (deivce data is allocated if null)
-	bool copyTo(DeviceType device);
-
-	// allocate device data
-	uint8_t *alloc(DeviceType device);
-
 	// return point to host or device data
-	uint8_t *data(DeviceType device = DeviceType::Host);
-	const uint8_t *constData(DeviceType device = DeviceType::Host) const noexcept;
+	uint8_t *data();
+	const uint8_t *constData() const noexcept;
 
 	// helper functions to check if position is inside of the volume
 	bool contains(int x, int y, int z) const;
