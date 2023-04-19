@@ -160,7 +160,7 @@ __global__ void hist3D_kernel(uint32_t *dVolume, const Localization *dLocs, uint
 		atomicAdd(dst, 1);
 }
 
-void Rendering::render_hist3D_gpu(const Localizations &locs, uint32_t *output, std::array<int,3> size, std::array<float,3> voxelSize, std::array<float,3> origin)
+void Rendering::renderHistgram3D_gpu(const Localizations &locs, uint32_t *output, std::array<int,3> size, std::array<float,3> voxelSize, std::array<float,3> origin)
 {
 	const size_t voxels = 1ull * size[0] * size[1] * size[2];
 

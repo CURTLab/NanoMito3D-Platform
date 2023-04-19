@@ -37,12 +37,10 @@
 #include "Skeletonize3D.h"
 #include "AnalyzeSkeleton.h"
 #include "Segments.h"
-#include "Octree.h"
 
 AnalyzeMitochondria::AnalyzeMitochondria(QObject *parent)
 	: QObject{parent}
 {
-
 }
 
 void AnalyzeMitochondria::load(const QString &fileName, bool threaded)
@@ -235,14 +233,13 @@ void AnalyzeMitochondria::analyzeSkeleton(Volume filteredVolume, Volume skeleton
 			start = std::chrono::steady_clock::now();
 			m_hist.alloc(m_volume.width(), m_volume.height(), m_volume.depth());
 
-			Rendering::render_hist3D_gpu(m_locs, m_hist.data, m_volume.size(), m_volume.voxelSize(), m_volume.origin());
+			if (useGPU)
+				Rendering::renderHistgram3D_gpu(m_locs, m_hist.data, m_volume.size(), m_volume.voxelSize(), m_volume.origin());
+			else
+				Rendering::renderHistgram3D_cpu(m_locs, m_hist.data, m_volume.size(), m_volume.voxelSize(), m_volume.origin());
 
 			dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 			qDebug().nospace() << "Rendering histgram (" << (useGPU ? "GPU" : "CPU") << "): " << dur.count() << " s";
-
-			/*Octree<uint32_t,float,50> tree(m_locs.bounds());
-			for (uint32_t i = 0; i < m_locs.size(); ++i)
-				tree.insert(m_locs[i].position(), i);*/
 
 			// filter skeleton 3D
 			start = std::chrono::steady_clock::now();
@@ -256,7 +253,6 @@ void AnalyzeMitochondria::analyzeSkeleton(Volume filteredVolume, Volume skeleton
 			int id = 1;
 			for (int i = 0; i < trees.size(); ++i) {
 				const auto &t = trees[i];
-				auto start2 = std::chrono::steady_clock::now();
 
 				auto [segment,voxels,box] = trees.extractVolume(filteredVolume, 1, i);
 
@@ -264,18 +260,13 @@ void AnalyzeMitochondria::analyzeSkeleton(Volume filteredVolume, Volume skeleton
 					continue;
 				}
 
-				auto dur1 = std::chrono::duration<double>(std::chrono::steady_clock::now() - start2);
-
-				start2 = std::chrono::steady_clock::now();
-
 				// draw segment to new volume and count SMLM signals
-				uint32_t signalCount1 = 0, signalCount2 = 0;
+				uint32_t signalCount1 = 0;
 				box.forEachVoxel([&](int x, int y, int z) {
 					if (segment(x, y, z)) {
 						segmentedVolume(x, y, z) = 255;
 						m_labeledVolume(x, y, z) = id;
 						signalCount1 += m_hist(x, y, z);
-						//signalCount2 += static_cast<uint32_t>(tree.countInBox(m_volume.mapVoxel(x, y, z), m_volume.voxelSize()));
 					}
 				});
 
@@ -303,30 +294,12 @@ void AnalyzeMitochondria::analyzeSkeleton(Volume filteredVolume, Volume skeleton
 				s->data.depth = box.depth() + 1;
 				s->data.signalCount = signalCount1;
 
-#if 0
-				auto dur2 = std::chrono::duration<double>(std::chrono::steady_clock::now() - start2);
-
-				start2 = std::chrono::steady_clock::now();
-
-				AnalyzeSegment::estimateTubeWidth(s, segment);
-				//AnalyzeSegment::estimateTubeWidth2(s, segment);
-
-				auto dur3 = std::chrono::duration<double>(std::chrono::steady_clock::now() - start2);
-#endif
-
 				for (const auto &p : t.endPoints)
 					s->endPoints.push_back(m_skeleton.mapVoxel(p.x, p.y, p.z, true));
 
 				s->vol = segment;
 
 				m_segments.push_back(s);
-
-#if 0
-				qDebug() << i << trees.size() << s->data.meanTubeWidth
-							<< "extractVolume" << dur1.count() << "s"
-							<< "draw segments" << dur2.count() << "s"
-							<< "estimateTubeWidth" << dur3.count() << "s";
-#endif
 
 				emit progressChanged(i);
 			}

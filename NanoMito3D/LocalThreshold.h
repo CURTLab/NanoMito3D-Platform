@@ -23,6 +23,7 @@
 #define LOCALTHRESHOLD_H
 
 #include "Volume.h"
+#include "Device.h"
 
 #include <functional>
 

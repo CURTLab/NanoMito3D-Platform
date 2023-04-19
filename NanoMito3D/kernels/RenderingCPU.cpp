@@ -25,7 +25,10 @@
 #include <cmath>
 #include <algorithm>
 
-void drawPSF(uint8_t *volume, const Localization &l, const std::array<int,3> &volumeDims, const std::array<float,3> &voxelSize, const std::array<float,3> &origin, int windowSize)
+namespace Rendering
+{
+
+void drawPSF_cpu(uint8_t *volume, const Localization &l, const std::array<int,3> &volumeDims, const std::array<float,3> &voxelSize, const std::array<float,3> &origin, int windowSize)
 {
 	const float posx = l.x - origin[0];
 	const float posy = l.y - origin[1];
@@ -53,6 +56,8 @@ void drawPSF(uint8_t *volume, const Localization &l, const std::array<int,3> &vo
 	}
 }
 
+}
+
 Volume Rendering::render_cpu(Localizations &locs, std::array<float,3> voxelSize, int windowSize)
 {
 	std::array<int,3> dims;
@@ -65,7 +70,25 @@ Volume Rendering::render_cpu(Localizations &locs, std::array<float,3> voxelSize,
 	Volume volume(dims, voxelSize, orgin);
 	volume.fill(0);
 	for (const auto &l : locs)
-		drawPSF(volume.data(), l, dims, voxelSize, orgin, windowSize);
+		drawPSF_cpu(volume.data(), l, dims, voxelSize, orgin, windowSize);
 
 	return volume;
+}
+
+void Rendering::renderHistgram3D_cpu(const Localizations &locs, uint32_t *output, std::array<int,3> size, std::array<float,3> voxelSize, std::array<float,3> origin)
+{
+	const size_t voxels = 1ull * size[0] * size[1] * size[2];
+	const size_t stride[3] = {1ull, 1ull * size[0], 1ull * size[0] * size[1]};
+
+	std::fill_n(output, voxels, 0u);
+
+	// count localizations in each voxel
+	for (const auto &l : locs) {
+		const int x = static_cast<int>(std::round(((l.x - origin[0]) / voxelSize[0])));
+		const int y = static_cast<int>(std::round(((l.y - origin[1]) / voxelSize[1])));
+		const int z = static_cast<int>(std::round(((l.z - origin[2]) / voxelSize[2])));
+
+		if (x >= 0 && x < size[0] && y >= 0 && y < size[1] && z >= 0 && z < size[2])
+			output[stride[0] * x + stride[1] * y + stride[2] * z]++;
+	}
 }

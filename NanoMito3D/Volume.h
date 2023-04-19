@@ -27,7 +27,7 @@
 #include <array>
 #include <string>
 
-#include "Device.h"
+#include "Types.h"
 
 class VolumeData;
 

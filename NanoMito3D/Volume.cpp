@@ -32,6 +32,8 @@
 #include <opencv2/opencv.hpp>
 #include <filesystem>
 
+#include "Device.h"
+
 class VolumeData
 {
 public:
