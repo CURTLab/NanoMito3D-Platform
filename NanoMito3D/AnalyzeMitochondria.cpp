@@ -174,7 +174,8 @@ void AnalyzeMitochondria::analyze(float sigma, ThresholdMethods thresholdMethod,
 				emit progressRangeChanged(0, static_cast<int>(m_filteredVolume.voxels())-1);
 
 				auto cb = [&](uint32_t i, uint32_t n) {
-					emit progressChanged(i);
+					if ((i % 1024 == 0) || (i >= n-128))
+						emit progressChanged(i);
 				};
 
 				switch(thresholdMethod) {

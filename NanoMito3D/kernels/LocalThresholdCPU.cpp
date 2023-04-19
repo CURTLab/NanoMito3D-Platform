@@ -24,6 +24,7 @@
 
 #include <algorithm>
 #include <execution>
+#include <QDebug>
 
 int calcHist(const Volume &input, uint16_t hist[256], int x, int y, int z, int r)
 {
@@ -50,9 +51,10 @@ int calcHist(const Volume &input, uint16_t hist[256], int x, int y, int z, int r
 	return numVoxels;
 }
 
-void LocalThreshold::localThrehsold_cpu(Method method, Volume input, Volume output, int windowSize, std::function<void (uint32_t, uint32_t)> cb)
+void LocalThreshold::localThrehsold_cpu(Method method, const Volume &input, Volume &output, int windowSize, std::function<void (uint32_t, uint32_t)> cb)
 {
-	output = Volume(input.size(), input.voxelSize(), input.origin());
+	Volume result(input.size(), input.voxelSize(), input.origin());
+	result.fill(0);
 
 	const auto numThreads = std::thread::hardware_concurrency();
 	const size_t pack = (input.voxels() + numThreads - 1) / numThreads;
@@ -62,8 +64,7 @@ void LocalThreshold::localThrehsold_cpu(Method method, Volume input, Volume outp
 	// multi-threaded implementation
 	std::vector<std::thread> threads;
 	for (size_t offset = 0; offset < input.voxels(); offset += pack) {
-
-		threads.emplace_back(std::thread([offset,&pack,&method,&input,&output,windowSize,&cb,&counter]() {
+		threads.emplace_back(std::thread([offset,&pack,&method,&input,&result,windowSize,&cb,&counter]() {
 			const uint32_t n = static_cast<uint32_t>(input.voxels());
 
 			uint16_t hist[256];
@@ -71,15 +72,16 @@ void LocalThreshold::localThrehsold_cpu(Method method, Volume input, Volume outp
 			const size_t begin = offset;
 			const size_t end = std::min(offset + pack, input.voxels());
 
-			uint8_t *val = output.data() + begin;
-			for (size_t i = begin; i < end; ++i, ++val) {
+			uint8_t *dst = result.data() + begin;
+			const uint8_t *src = input.constData() + begin;
+			for (size_t i = begin; i < end; ++i, ++dst, ++src) {
 				const auto idx = input.mapIndex(i);
 				// calc local histogram
 				const int numVoxels = calcHist(input, hist, idx[0], idx[1], idx[2], windowSize/2);
 
 				// skip if all zero
 				if (hist[0] == numVoxels) {
-					*val = 0;
+					*dst = 0;
 					continue;
 				}
 
@@ -89,7 +91,7 @@ void LocalThreshold::localThrehsold_cpu(Method method, Volume input, Volume outp
 					threshold = otsuThreshold(hist, numVoxels);
 				else if (method == LocalThreshold::IsoData)
 					threshold = isoDataThreshold(hist, numVoxels);
-				*val = *val >= threshold ? 255 : 0;
+				*dst = *src >= threshold ? 255 : 0;
 
 				// optional progress indicator
 				if (cb)
@@ -101,4 +103,5 @@ void LocalThreshold::localThrehsold_cpu(Method method, Volume input, Volume outp
 
 	for (size_t j = 0; j < threads.size(); ++j)
 		threads[j].join();
+	output = result;
 }
