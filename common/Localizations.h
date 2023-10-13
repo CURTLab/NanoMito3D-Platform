@@ -47,6 +47,7 @@ public:
 	~Localizations();
 
 	void load(const std::string &fileName, std::function<void(uint32_t,uint32_t,const Localization &)> cb);
+	void save(const std::string &fileName);
 
 	// returns width of the localizations in nm
 	inline constexpr float width() const { return m_width * m_pixelSize; }

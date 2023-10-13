@@ -158,6 +158,87 @@ void Localizations::load(const std::string &fileName, std::function<void (uint32
 	stream.close();
 }
 
+void Localizations::save(const std::string &fileName)
+{
+	std::fstream stream;
+	stream.open(fileName, std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
+	if (!stream.good())
+		throw std::runtime_error("Failed to open file for writing");
+
+	int64_t offset = 0;
+	{
+		google::protobuf::io::OstreamOutputStream output(&stream);
+		google::protobuf::io::CodedOutputStream codedOutput(&output);
+
+		codedOutput.Skip(12);
+
+		int i = 0;
+		for (const auto &l : *this) {
+			TSF::Spot spot;
+			spot.set_molecule(++i);
+			spot.set_channel(l.channel);
+			spot.set_frame(l.frame);
+
+			spot.set_x(l.x);
+			spot.set_x_precision(l.PAx);
+			spot.set_y(l.y);
+			spot.set_y_precision(l.PAy);
+			spot.set_z(l.z);
+			spot.set_z_precision(l.PAz);
+
+			spot.set_intensity(l.intensity);
+			spot.set_background(l.background);
+
+			std::string data;
+			if (!spot.SerializeToString(&data)) {
+				throw std::runtime_error("Spot serialization failed!");
+			}
+			codedOutput.WriteVarint32(static_cast<int32_t>(data.length()));
+			codedOutput.WriteRaw(data.c_str(), static_cast<int32_t>(data.length()));
+			//stream.flush();
+		}
+		stream.flush();
+		offset = codedOutput.ByteCount();
+		const size_t skip = stream.tellp() - offset;
+		codedOutput.Skip(static_cast<int32_t>(skip-12));
+
+		TSF::SpotList spot_list;
+		// set application ID to 5 - allocated ID from Nico Stuurman 2016-10-11 for 3D-STORM-Tools
+		spot_list.set_application_id(5);
+		spot_list.set_nr_spots(size());
+		spot_list.set_location_units(TSF::NM);
+		spot_list.set_intensity_units(TSF::COUNTS);
+		spot_list.set_fit_mode(TSF::TWOAXISANDTHETA);
+		spot_list.set_nr_channels(2);
+		spot_list.set_pixel_size(m_pixelSize);
+		spot_list.set_nr_pixels_x(m_width);
+		spot_list.set_nr_pixels_y(m_height);
+		spot_list.set_nr_frames(m_numFrames);
+
+		std::string data;
+		if (!spot_list.SerializeToString(&data)) {
+			throw std::runtime_error("SpotList serialization failed!");
+		}
+		codedOutput.WriteVarint32(static_cast<int32_t>(data.length()));
+		codedOutput.WriteRaw(data.c_str(), static_cast<int32_t>(data.length()));
+		stream.flush();
+	}
+
+	stream.seekp(0, std::ios_base::beg);
+	if (stream.tellp() != 0) {
+		throw std::runtime_error("Failed to seek to beginning of file!");
+	}
+
+	int32_t magic = 0x0;
+	stream.write((char*)&magic, sizeof(magic));
+	int64_t tmp;
+	tmp = _byteswap_uint64(offset - 12);
+	stream.write((char*)&tmp, sizeof(tmp));
+	stream.flush();
+
+	stream.close();
+}
+
 void Localizations::copyMetaDataFrom(const Localizations &other)
 {
 	m_width = other.m_width;
