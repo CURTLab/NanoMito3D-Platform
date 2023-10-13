@@ -66,16 +66,21 @@ public:
 	// returns highest axial postion found in localization dataset in nm
 	inline constexpr float maxZ() const { return m_maxZ; }
 
+	// returns number of channels
 	inline constexpr int numFrames() const { return m_numFrames-1; }
 
+	// returns bounds of the localizations in nm
 	inline constexpr Bounds<float> bounds() const {
 		return {0.f, m_width * m_pixelSize,  0.f, m_height * m_pixelSize, m_minZ, m_maxZ };
 	}
 
+	// returns number of channels
 	inline constexpr int channels() const { return m_channels; };
 
+	// copy the meta data from another Localizations object
 	void copyMetaDataFrom(const Localizations &other);
 
+	// returns a pointer to the first localization
 	inline const Localization *constData() const { return data(); }
 
 private:

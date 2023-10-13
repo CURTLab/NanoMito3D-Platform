@@ -30,6 +30,9 @@ NanoMito3D-Platform contains software applications for:
 * OpenCV 4.5.5
 * VTK 9.0/9.2.6
 * Qwt 6.1.6/6.2.0
-* protobuf 3.21.9
+* protobuf 21.12/3.21.9
 * CUDA 7.0
 * CMake 3.18.1
+
+Protobuf version 21.12 is recommended, since starting with version 22 protobuf is using Abseil (which gave me problems).
+Furthermore, [`TSFProto.proto`](https://github.com/nicost/TSFProto/blob/master/src/TSFProto.proto) by Nico Stuurman is modified to support protobuf-lite and the syntax is set to `proto2`.

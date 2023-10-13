@@ -19,6 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ****************************************************************************/
+
 #include "Localizations.h"
 
 #include <fstream>
@@ -27,7 +28,7 @@
 
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <google/protobuf/io/coded_stream.h>
-#include "proto/TSFProto.pb.h"
+#include <TSFProto.pb.h>
 
 Localizations::Localizations()
 	: m_width(0), m_height(0), m_pixelSize(1.f), m_minZ(0.f), m_maxZ(0.f), m_channels(1), m_numFrames(0)
@@ -146,7 +147,8 @@ void Localizations::load(const std::string &fileName, std::function<void (uint32
 			m_minZ = std::min(m_minZ, l.z);
 			m_maxZ = std::max(m_maxZ, l.z);
 
-			cb(i, spots, l);
+			if (cb)
+				cb(i, spots, l);
 
 			push_back(l);
 		}

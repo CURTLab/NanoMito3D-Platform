@@ -11,10 +11,13 @@
 // Jan. 2017, added fields suggested by Alex Herbert
 // License: BSD 2-Clause License
 
+syntax = "proto2";
+
 package TSF;
 
 option java_package = "edu.ucsf.valelab.tsf";
 option java_outer_classname = "TaggedSpotsProtos";
+option optimize_for = LITE_RUNTIME;
 
 enum FitMode {
    ONEAXIS = 0;

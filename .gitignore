@@ -1,7 +1,8 @@
-
 *.user
-common/proto/TSFProto.pb.*
 *.tsf
 *.tif
 common/Version.h
 build-*
+*.pb.cc
+*.pb.h
+*.autosave
