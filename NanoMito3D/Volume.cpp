@@ -26,7 +26,6 @@
 #include <hdf5.h>
 #endif // USE_H5
 
-#include <cuda_runtime_api.h>
 #include <stdexcept>
 #include <assert.h>
 #include <opencv2/opencv.hpp>

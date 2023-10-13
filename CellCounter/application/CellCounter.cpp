@@ -181,7 +181,8 @@ bool CellCounter::predict(const cv::Mat &input, cv::Mat &output)
 
 cv::Mat CellCounter::splineWindow(int windowSize) const
 {
-	// translated to c++ from https://github.com/Vooban/Smoothly-Blend-Image-Patche
+	// translated to c++ from https://github.com/Vooban/Smoothly-Blend-Image-Patches
+	// https://www.wolframalpha.com/input/?i=y%3Dx**2,+y%3D-(x-2)**2+%2B2,+y%3D(x-4)**2,+from+y+%3D+0+to+2
 
 	cv::Mat wind(windowSize, 1, CV_32F, 0.f);
 
@@ -197,9 +198,11 @@ cv::Mat CellCounter::splineWindow(int windowSize) const
 		wind.at<float>(i) = 1.0 - std::pow(std::abs(2.0*(w - 1)), 2.0) * 0.5;
 	}
 
+#if 0
 	std::vector<float> array(windowSize);
 	for (int i = 0; i < windowSize; ++i)
 		array[i] = wind.at<float>(i);
+#endif
 
 	const auto mean = cv::mean(wind);
 	wind /= mean;

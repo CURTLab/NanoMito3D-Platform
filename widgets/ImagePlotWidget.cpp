@@ -39,6 +39,7 @@
 #include <qwt_plot_canvas.h>
 #include <qwt_plot_shapeitem.h>
 #include <qwt_interval.h>
+#include <qwt_color_map.h>
 
 class ImagePlotRasterData : public QwtRasterData
 {
