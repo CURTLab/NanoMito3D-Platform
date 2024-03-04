@@ -397,7 +397,14 @@
     </widget>
     <addaction name="menuExport"/>
    </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="actionSetBackgroundColor"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionExportVolume">
@@ -419,6 +426,11 @@
   <action name="actionExportRenderer">
    <property name="text">
     <string>3D Renderer ...</string>
+   </property>
+  </action>
+  <action name="actionSetBackgroundColor">
+   <property name="text">
+    <string>Set background color ...</string>
    </property>
   </action>
  </widget>

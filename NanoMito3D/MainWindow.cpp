@@ -27,11 +27,11 @@
 #include "Localizations.h"
 #include "Segments.h"
 
-#include <chrono>
 #include <QDebug>
 
 #include <QMessageBox>
 #include <QFileDialog>
+#include <QColorDialog>
 
 MainWindow::MainWindow(QWidget *parent)
 	: QMainWindow(parent)
@@ -99,16 +99,24 @@ MainWindow::MainWindow(QWidget *parent)
 		QMessageBox::critical(this, title, errorMessage);
 			  });
 
+	m_currentFile = DEV_PATH "examples/";
+
 	// localizations loading section
 	connect(m_ui->buttonSelectFile, &QAbstractButton::released,
 			  this, [this]() {
 		m_bar->setVisible(false);
-		QString fileName = QFileDialog::getOpenFileName(this, "Open localization file", DEV_PATH "examples/", "TSF File (*.tsf)");
+		QString fileName = QFileDialog::getOpenFileName(this, "Open localization file", m_currentFile, "TSF File (*.tsf)");
 		if (!fileName.isEmpty()) {
 			m_ui->statusbar->showMessage(tr("Load %1").arg(QFileInfo(fileName).fileName()));
 			m_ui->frame->setEnabled(false);
+
+			m_ui->buttonRender->setEnabled(false);
+			m_ui->buttonAnalyse->setEnabled(false);
+			m_ui->buttonClassify->setEnabled(false);
+
 			m_bar->setVisible(true);
 			m_analyis.load(fileName);
+			m_currentFile = fileName;
 		}
 	});
 
@@ -122,11 +130,19 @@ MainWindow::MainWindow(QWidget *parent)
 		m_ui->statusbar->showMessage(tr("Loaded %1 localizations form %2 successfully!")
 											  .arg(m_analyis.localizations().size())
 											  .arg(QFileInfo(m_analyis.fileName()).fileName()));
+
+		// Channel colors: Red, Blue, Green
+		std::array<double,3> colors[] = {{1, 0, 0}, {0, 0, 1}, {0, 1, 0}};
+		const auto nColors = sizeof(colors) / sizeof(colors[0]);
+
 		if (m_analyis.availableChannels() > 1) {
 			m_ui->comboChannel->clear();
 			m_ui->comboChannel->addItem(tr("All channels"));
-			for (int i = 0; i < m_analyis.availableChannels(); ++i)
-				m_ui->comboChannel->addItem(tr("Channel %1").arg(i+1));
+			for (int i = 0; i < m_analyis.availableChannels(); ++i) {
+				QPixmap pix(18, 18);
+				pix.fill(QColor::fromRgbF(colors[i][0], colors[i][1], colors[i][2]));
+				m_ui->comboChannel->addItem(QIcon(pix), tr("Channel %1").arg(i+1));
+			}
 			m_ui->comboChannel->setEnabled(true);
 		} else {
 			m_ui->comboChannel->setCurrentIndex(0);
@@ -134,7 +150,10 @@ MainWindow::MainWindow(QWidget *parent)
 		}
 		m_ui->frame->setEnabled(true);
 
-		m_ui->volumeView->addLocalizations(m_analyis.localizations(), 1.2f, {0,0,1});
+		m_ui->volumeView->clear();
+		for (int channel = 1; channel <= m_analyis.localizations().channels(); ++channel) {
+			m_ui->volumeView->addLocalizations(m_analyis.localizations(), 1.2f, colors[(channel - 1) % nColors], channel);
+		}
 		m_ui->volumeView->resetCamera();
 	});
 
@@ -221,6 +240,12 @@ MainWindow::MainWindow(QWidget *parent)
 
 		m_ui->frame->setEnabled(true);
 	});
+
+	connect(m_ui->actionSetBackgroundColor, &QAction::triggered, this, [this]() {
+		QColor color = QColorDialog::getColor(m_ui->volumeView->backgroundColor(), this, "Set background color");
+		if (color.isValid())
+			m_ui->volumeView->setBackgroundColor(color);
+	});
 }
 
 MainWindow::~MainWindow()
@@ -234,9 +259,9 @@ void MainWindow::exportVolumeDialog(const Volume &volume, const QString &name)
 		return;
 	try {
 		volume.saveTif(fileName.toStdString());
-		m_ui->statusbar->showMessage(tr("Exported %1 to '%2'").arg(name).arg(fileName));
+		m_ui->statusbar->showMessage(tr("Exported %1 to '%2'").arg(name, fileName));
 	} catch(std::runtime_error &e) {
-		QMessageBox::critical(this, tr("Error"), tr("Could not export %1 '%2'. Reason: %3").arg(name).arg(fileName).arg(e.what()));
+		QMessageBox::critical(this, tr("Error"), tr("Could not export %1 '%2'. Reason: %3").arg(name, fileName, e.what()));
 	}
 }
 

@@ -53,6 +53,7 @@ private:
 	std::unique_ptr<Ui::MainWindow> m_ui;
 	QProgressBar *m_bar;
 	AnalyzeMitochondria m_analyis;
+	QString m_currentFile;
 
 };
 

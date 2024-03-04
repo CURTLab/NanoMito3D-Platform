@@ -64,6 +64,7 @@
 #include <vtkAppendPolyData.h>
 #include <vtkPolyDataWriter.h>
 #include <vtkXMLPolyDataWriter.h>
+#include <vtkMatrix4x4.h>
 
 class VolumeWidgetPrivate : public QVTKOpenGLNativeWidget
 {
@@ -226,13 +227,15 @@ void VolumeWidget::addVolume(Volume volume, std::array<double, 4> color, bool co
 	d->renderWindow()->Render();
 }
 
-void VolumeWidget::addLocalizations(const Localizations &locs, float pointSize, std::array<double, 3> color)
+void VolumeWidget::addLocalizations(const Localizations &locs, float pointSize, std::array<double, 3> color, int channel)
 {
 	Q_D(VolumeWidget);
 
 	vtkNew<vtkPoints> pts;
 	vtkNew<vtkCellArray> verts;
 	for (const auto &l : locs) {
+		if (channel > 0 && l.channel != channel)
+			continue;
 		auto idx = pts->InsertNextPoint(l.x * 1E-3, l.y * 1E-3, l.z * 1E-3);
 		verts->InsertNextCell(1);
 		verts->InsertCellPoint(idx);
@@ -430,10 +433,28 @@ void VolumeWidget::saveAsPNG(const QString &fileName)
 	png->Write();
 }
 
+QColor VolumeWidget::backgroundColor() const
+{
+	Q_D(const VolumeWidget);
+	const double *color = d->renderer->GetBackground();
+	return QColor::fromRgbF(color[0], color[1], color[2]);
+}
+
+void VolumeWidget::setBackgroundColor(const QColor &color)
+{
+	Q_D(VolumeWidget);
+	d->renderer->SetBackground(color.redF(), color.greenF(), color.blueF());
+	d->renderWindow()->Render();
+}
+
 void VolumeWidget::resetCamera()
 {
 	Q_D(VolumeWidget);
+
+	auto camera = d->renderer->GetActiveCamera();
+	camera->OrthogonalizeViewUp();
 	d->renderer->ResetCamera();
+
 	d->renderWindow()->Render();
 }
 

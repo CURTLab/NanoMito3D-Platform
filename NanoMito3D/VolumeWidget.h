@@ -45,13 +45,16 @@ public:
 	void setBounds(double bounds[6]);
 
 	void addVolume(Volume volume, std::array<double,4> color, bool copyData = true);
-	void addLocalizations(const Localizations &locs, float pointSize, std::array<double,3> color);
+	void addLocalizations(const Localizations &locs, float pointSize, std::array<double,3> color, int channel = -1);
 	void addSpheres(const std::vector<std::array<float,3>> &points, float r, std::array<double,3> color);
 	void addGraph(std::shared_ptr<SkeletonGraph> graph, const Volume &volume, float r, std::array<double,3> color);
 	void addClassifiedVolume(Volume volume, int classes, bool copyData = true);
 	void saveGraphs(const QString &fileName);
 
 	void saveAsPNG(const QString &fileName);
+
+	QColor backgroundColor() const;
+	void setBackgroundColor(const QColor &color);
 
 public slots:
 	void resetCamera();
