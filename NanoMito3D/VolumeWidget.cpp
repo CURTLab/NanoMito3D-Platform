@@ -61,10 +61,18 @@
 #include <vtkWindowToImageFilter.h>
 #include <vtkPNGWriter.h>
 
+#include <vtkAppendPolyData.h>
+#include <vtkPolyDataWriter.h>
+#include <vtkXMLPolyDataWriter.h>
+
 class VolumeWidgetPrivate : public QVTKOpenGLNativeWidget
 {
 public:
-	inline VolumeWidgetPrivate(QWidget *parent) : QVTKOpenGLNativeWidget(parent) {}
+	inline VolumeWidgetPrivate(QWidget *parent)
+		: QVTKOpenGLNativeWidget(parent)
+	{
+		append = vtkSmartPointer<vtkAppendPolyData>::New();
+	}
 
 	inline vtkSmartPointer<vtkStructuredPoints> fromVolume(Volume volume, bool copyData) const
 	{
@@ -132,6 +140,7 @@ public:
 	}
 
 	vtkSmartPointer<vtkRenderer> renderer;
+	vtkSmartPointer<vtkAppendPolyData> append;
 };
 
 VolumeWidget::VolumeWidget(QWidget *parent)
@@ -168,6 +177,7 @@ VolumeWidget::~VolumeWidget()
 void VolumeWidget::clear()
 {
 	Q_D(VolumeWidget);
+	d->append->RemoveAllInputs();
 	d->renderer->RemoveAllViewProps();
 	d->renderer->ResetCamera();
 	d->renderWindow()->Render();
@@ -294,6 +304,8 @@ void VolumeWidget::addGraph(std::shared_ptr<SkeletonGraph> graph, const Volume &
 	if (edges.empty())
 		return;
 
+	vtkNew<vtkAppendPolyData> append;
+
 	for (const auto &edge : edges) {
 		vtkNew<vtkPoints> points;
 		if (edge->v1 >= 0) {
@@ -327,16 +339,22 @@ void VolumeWidget::addGraph(std::shared_ptr<SkeletonGraph> graph, const Volume &
 		tuber->SetInputData(functionSource->GetOutput());
 		tuber->SetNumberOfSides(6);
 		tuber->SetRadius(r * 1E-3); // in µm
+		tuber->Update();
 
-		vtkNew<vtkPolyDataMapper> tubeMapper;
-		tubeMapper->SetInputConnection(tuber->GetOutputPort());
-
-		vtkNew<vtkActor> actor;
-		actor->SetMapper(tubeMapper);
-		actor->GetProperty()->SetColor(color[0], color[1], color[2]);
-
-		d->renderer->AddActor(actor);
+		append->AddInputData(tuber->GetOutput());
 	}
+	append->Update();
+
+	d->append->AddInputData(append->GetOutput());
+
+	vtkNew<vtkPolyDataMapper> tubeMapper;
+	tubeMapper->SetInputData(append->GetOutput());
+
+	vtkNew<vtkActor> actor;
+	actor->SetMapper(tubeMapper);
+	actor->GetProperty()->SetColor(color[0], color[1], color[2]);
+
+	d->renderer->AddActor(actor);
 	d->renderWindow()->Render();
 }
 
@@ -373,6 +391,26 @@ void VolumeWidget::addClassifiedVolume(Volume volume, int classes, bool copyData
 
 	d->renderer->AddActor(actor);
 	d->renderWindow()->Render();
+}
+
+void VolumeWidget::saveGraphs(const QString &fileName)
+{
+	Q_D(VolumeWidget);
+	d->append->Update();
+
+	if (fileName.endsWith("vtk", Qt::CaseInsensitive)) {
+		vtkNew<vtkPolyDataWriter> writer;
+		writer->SetFileTypeToBinary();
+		writer->SetFileName(qPrintable(fileName));
+		writer->SetInputData(d->append->GetOutput());
+		writer->Write();
+	} else {
+		vtkNew<vtkXMLPolyDataWriter> writer;
+		writer->SetFileName(qPrintable(fileName));
+		writer->SetInputConnection(d->append->GetOutputPort());
+		writer->Write();
+	}
+
 }
 
 void VolumeWidget::saveAsPNG(const QString &fileName)

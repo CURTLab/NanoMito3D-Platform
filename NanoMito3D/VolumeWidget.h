@@ -49,6 +49,7 @@ public:
 	void addSpheres(const std::vector<std::array<float,3>> &points, float r, std::array<double,3> color);
 	void addGraph(std::shared_ptr<SkeletonGraph> graph, const Volume &volume, float r, std::array<double,3> color);
 	void addClassifiedVolume(Volume volume, int classes, bool copyData = true);
+	void saveGraphs(const QString &fileName);
 
 	void saveAsPNG(const QString &fileName);
 
