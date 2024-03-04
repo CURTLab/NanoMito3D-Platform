@@ -61,6 +61,10 @@ MainWindow::MainWindow(QWidget *parent)
 	m_ui->buttonAnalyse->setEnabled(false);
 	m_ui->buttonClassify->setEnabled(false);
 
+#ifndef CUDA_SUPPORT
+	m_ui->checkUseGPU->setVisible(false);
+#endif // CUDA_SUPPORT
+
 	setWindowTitle(tr("NanoMito3D r%1").arg(GIT_REVISION));
 
 	m_analyis.loadModel(DEV_PATH "examples/mitoTrainDataSet.csv");

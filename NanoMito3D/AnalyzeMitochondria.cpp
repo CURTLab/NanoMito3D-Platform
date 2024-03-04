@@ -98,10 +98,14 @@ void AnalyzeMitochondria::render(std::array<float, 3> voxelSize, std::array<floa
 				// filter by density
 				start = std::chrono::steady_clock::now();
 
-				if (useGPU)
+#ifdef CUDA_SUPPORT
+				if (useGPU) {
 					m_locs.erase(DensityFilter::remove_gpu(m_locs, minPts, radius), m_locs.end());
-				else
+				} else
+#endif // CUDA_SUPPORT
+				{
 					m_locs.erase(DensityFilter::remove_cpu(m_locs, minPts, radius), m_locs.end());
+				}
 
 				dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 
@@ -111,10 +115,14 @@ void AnalyzeMitochondria::render(std::array<float, 3> voxelSize, std::array<floa
 			// 3D rendering
 			start = std::chrono::steady_clock::now();
 
-			if (useGPU)
+#ifdef CUDA_SUPPORT
+			if (useGPU) {
 				m_volume = Rendering::render_gpu(m_locs, voxelSize, windowSize);
-			else
+			} else
+#endif // CUDA_SUPPORT
+			{
 				m_volume = Rendering::render_cpu(m_locs, voxelSize, windowSize);
+			}
 
 			dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 
@@ -152,10 +160,14 @@ void AnalyzeMitochondria::analyze(float sigma, ThresholdMethods thresholdMethod,
 
 			const int windowSize = (int)(sigma * 4) | 1;
 			// default 7
-			if (useGPU)
+#ifdef CUDA_SUPPORT
+			if (useGPU) {
 				GaussianFilter::gaussianFilter_gpu(m_volume.constData(), m_filteredVolume.data(), m_volume.width(), m_volume.height(), m_volume.depth(), windowSize, sigmaScaled);
-			else
+			} else
+#endif // CUDA_SUPPORT
+			{
 				GaussianFilter::gaussianFilter_cpu(m_volume.constData(), m_filteredVolume.data(), m_volume.width(), m_volume.height(), m_volume.depth(), windowSize, sigmaScaled);
+			}
 
 			auto dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 
@@ -164,13 +176,15 @@ void AnalyzeMitochondria::analyze(float sigma, ThresholdMethods thresholdMethod,
 			// local thresholding 3D
 			start = std::chrono::steady_clock::now();
 
+#ifdef CUDA_SUPPORT
 			if (useGPU) {
 				switch(thresholdMethod) {
 				case ThresholdMethods::LocalISOData: LocalThreshold::localThrehsold_gpu(LocalThreshold::IsoData, m_filteredVolume, m_filteredVolume, 11); break;
 				case ThresholdMethods::LocalOtsu: LocalThreshold::localThrehsold_gpu(LocalThreshold::Otsu, m_filteredVolume, m_filteredVolume, 11); break;
 				}
-			} else {
-
+			} else
+#endif // CUDA_SUPPORT
+			{
 				emit progressRangeChanged(0, static_cast<int>(m_filteredVolume.voxels())-1);
 
 				auto cb = [&](uint32_t i, uint32_t n) {
@@ -234,10 +248,14 @@ void AnalyzeMitochondria::analyzeSkeleton(Volume filteredVolume, Volume skeleton
 			start = std::chrono::steady_clock::now();
 			m_hist.alloc(m_volume.width(), m_volume.height(), m_volume.depth());
 
-			if (useGPU)
+#ifdef CUDA_SUPPORT
+			if (useGPU) {
 				Rendering::renderHistgram3D_gpu(m_locs, m_hist.data, m_volume.size(), m_volume.voxelSize(), m_volume.origin());
-			else
+			} else
+#endif // CUDA_SUPPORT
+			{
 				Rendering::renderHistgram3D_cpu(m_locs, m_hist.data, m_volume.size(), m_volume.voxelSize(), m_volume.origin());
+			}
 
 			dur = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
 			qDebug().nospace() << "Rendering histgram (" << (useGPU ? "GPU" : "CPU") << "): " << dur.count() << " s";

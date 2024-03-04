@@ -34,60 +34,7 @@
 //using idx_t = int64_t;
 using idx_t = int;
 
-HOST_DEV uint8_t LocalThreshold::otsuThreshold(const uint16_t hist[256], int numPixels)
-{
-	int i;
-	uint8_t threshold = 0;
-	const float term = 1.f / numPixels;
-
-	float total_mean = 0.f;
-	for (i = 0; i < 256; ++i)
-		total_mean += i * term * hist[i];
-
-	float max_bcv = 0.f;
-	float cnh = 0.f;
-	float mean = 0.f;
-	for (i = 0; i < 256; ++i) {
-		const float norm = term * hist[i];
-		cnh += norm;
-		mean += i * norm;
-
-		float p = max(1E-7f, cnh);
-
-		float bcv = total_mean * cnh - mean;
-		bcv *= bcv / (p * (1.f - p));
-
-		if (max_bcv < bcv) {
-			max_bcv = bcv;
-			threshold = i;
-		}
-	}
-	return threshold;
-}
-
-HOST_DEV uint8_t LocalThreshold::isoDataThreshold(const uint16_t hist[256], int numPixels)
-{
-	int i;
-
-	float toth = 0.f, h = 0.f;
-	float totl = 0.f, l = 0.f;
-	for (i = 1; i < 256; ++i) {
-		toth += static_cast<float>(hist[i]);
-		h += i * static_cast<float>(hist[i]);
-	}
-
-	uint8_t threshold = 255;
-	for (i = 1; i < 255; ++i) {
-		totl += hist[i];
-		l += static_cast<float>(hist[i]) * i;
-		toth -= hist[i+1];
-		h -= static_cast<float>(hist[i+1]) * (i+1);
-		if (totl > 0 && toth > 0 && i == (uint8_t)(0.5 * (l/totl + h/toth))) {
-			threshold = i;
-		}
-	}
-	return threshold;
-}
+#include "LocalThreshold_impl.h"
 
 #define VOLUMEFILTER_MAXWEIGHTS VOLUMEFILTER_MAXSIZE*VOLUMEFILTER_MAXSIZE*VOLUMEFILTER_MAXSIZE
 __constant__ int32_t c_filterOffsets[VOLUMEFILTER_MAXWEIGHTS];

@@ -24,6 +24,10 @@
 
 #include <stdexcept>
 
+#ifdef CUDA_SUPPORT
+#include <cuda_runtime.h>
+#endif // CUDA_SUPPORT
+
 namespace GPU {
 
 static bool IS_DEVICE_AVAILABLE = false;
@@ -34,6 +38,9 @@ static bool INITIALIZED = false;
 void GPU::initGPU() {
 	if (INITIALIZED)
 		return;
+	INITIALIZED = true;
+
+#ifdef CUDA_SUPPORT
 	double hTmp = 1;
 	double *dTmp;
 	cudaMalloc(&dTmp, sizeof(double));
@@ -43,6 +50,7 @@ void GPU::initGPU() {
 	int nDevices = 0;
 	cudaGetDeviceCount(&nDevices);
 	IS_DEVICE_AVAILABLE = nDevices > 0;
+#endif
 }
 
 bool GPU::isGPUAvailable()
@@ -53,7 +61,9 @@ bool GPU::isGPUAvailable()
 
 void GPU::cudaCheckError()
 {
+#ifdef CUDA_SUPPORT
 	cudaError_t err = cudaGetLastError();
 	if (err != cudaSuccess)
 		throw std::runtime_error(std::string("Cuda error ") + cudaGetErrorName(err) + ": " + cudaGetErrorString(err));
+#endif
 }

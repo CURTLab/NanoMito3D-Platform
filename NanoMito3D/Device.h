@@ -22,15 +22,15 @@
 #ifndef DEVICE_H
 #define DEVICE_H
 
+#ifdef CUDA_SUPPORT
 #include <cuda_device_runtime_api.h>
-
-#include "Types.h"
+#endif // CUDA_SUPPORT
 
 #ifdef __CUDACC__
 #define HOST_DEV __device__ __host__
-#else
+#else // __CUDACC__
 #define HOST_DEV
-#endif
+#endif // __CUDACC__
 
 struct vec3 {
 	float x, y, z;

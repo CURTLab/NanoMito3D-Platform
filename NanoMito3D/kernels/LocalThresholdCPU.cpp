@@ -25,6 +25,13 @@
 #include <algorithm>
 #include <execution>
 #include <QDebug>
+#include <cmath>
+
+#ifndef CUDA_SUPPORT
+#define max fmax
+#include "LocalThreshold_impl.h"
+#undef max
+#endif // CUDA_SUPPORT
 
 int calcHist(const Volume &input, uint16_t hist[256], int x, int y, int z, int r)
 {
