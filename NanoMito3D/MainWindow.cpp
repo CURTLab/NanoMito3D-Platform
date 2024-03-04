@@ -198,6 +198,9 @@ MainWindow::MainWindow(QWidget *parent)
 		m_ui->volumeView->clear();
 		m_ui->volumeView->addClassifiedVolume(m_analyis.classifiedVolume(), m_analyis.numClasses());
 
+		// text color
+		QColor textColor = palette().color(QPalette::WindowText);
+
 		auto bars = m_analyis.classificationResult();
 		if (bars.size() == 3) {
 			m_ui->plot->clear();
@@ -205,7 +208,7 @@ MainWindow::MainWindow(QWidget *parent)
 			double max = 0;
 			for (int i = 0; i < bars.size(); ++i) {
 				max = std::max(max, bars[i]);
-				m_ui->plot->addText({(double)i, bars[i]}, QString("%1%").arg(bars[i]*100.0, 0, 'f', 2), Qt::black, Qt::AlignHCenter|Qt::AlignTop);
+				m_ui->plot->addText({(double)i, bars[i]}, QString("%1%").arg(bars[i]*100.0, 0, 'f', 2), textColor, Qt::AlignHCenter|Qt::AlignTop);
 			}
 			m_ui->plot->setYScale(0, max + 0.1);
 		} else {

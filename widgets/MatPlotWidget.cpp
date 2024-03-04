@@ -24,6 +24,12 @@
 
 #include <QPainter>
 #include <QVBoxLayout>
+#include <QMenu>
+#include <QAction>
+#include <QClipboard>
+#include <QApplication>
+#include <QFileDialog>
+
 #include <qwt_plot.h>
 #include <qwt_plot_item.h>
 #include <qwt_plot_scaleitem.h>
@@ -178,6 +184,8 @@ public:
 	inline MatPlotWidgetPrivate()
 		: tick(new MatPlotTick)
 		, grid(new QwtPlotGrid)
+		, canvas(qobject_cast<QwtPlotCanvas*>(QwtPlot::canvas()))
+		, darkStyle(QPalette().color(QPalette::WindowText).lightness() > QPalette().color(QPalette::Window).lightness())
 	{
 		tick->attach(this);
 
@@ -187,8 +195,7 @@ public:
 		axisWidget(QwtPlot::yLeft)->setScaleDraw(new MatPlotScaleDraw);
 		setAxisAutoScale(QwtPlot::xBottom, true);
 		setAxisAutoScale(QwtPlot::yLeft, true);
-
-		grid->setMajorPen(QPen(QColor(235, 235, 235), 1.25));
+		grid->setMajorPen(QPen(darkStyle ? QColor(52, 52, 52) : QColor(235, 235, 235), 1.25));
 		grid->attach(this);
 
 		plotLayout()->setAlignCanvasToScales(true);
@@ -198,16 +205,15 @@ public:
 		plotLayout()->setCanvasMargin(0, QwtPlot::yRight);
 		setStyleSheet("background-color: transparent;");
 
-		canvas = qobject_cast<QwtPlotCanvas*>(QwtPlot::canvas());
 		canvas->setFrameStyle(QFrame::Plain);
 		canvas->setBorderRadius(0.0);
-		canvas->setCursor(Qt::ArrowCursor);
-		canvas->setStyleSheet("background: #fff;");
+		canvas->setCursor(Qt::ArrowCursor);canvas->setStyleSheet(darkStyle ? "background: #202020;" : "background: #fff;");
 	}
 
 	MatPlotTick *tick;
 	QwtPlotGrid *grid;
 	QwtPlotCanvas *canvas;
+	const bool darkStyle;
 };
 
 MatPlotWidget::MatPlotWidget(QWidget *parent)
@@ -221,6 +227,28 @@ MatPlotWidget::MatPlotWidget(QWidget *parent)
 	setLayout(layout);
 
 	layout->addWidget(d);
+
+
+	connect(this, &MatPlotWidget::customContextMenuRequested,
+			this, [this](const QPoint &pt) {
+		QPoint globalPos = mapToGlobal(pt);
+
+		QMenu menu;
+		QAction *save = menu.addAction(tr("Save as ..."));
+		QAction *copy = menu.addAction(tr("Copy to clipboard"));
+
+		QAction *selectedItem = menu.exec(globalPos);
+		if (selectedItem == save) {
+			QString fileName = QFileDialog::getSaveFileName(this, tr("Save plot"), "",
+															tr("Image File (*.png *.jpg)"));
+			if (!fileName.isEmpty())
+				grab().save(fileName);
+		} else if (selectedItem == copy) {
+			QApplication::clipboard()->setPixmap(grab());
+		}
+	});
+
+	setContextMenuPolicy(Qt::CustomContextMenu);
 }
 
 void MatPlotWidget::hist(const QVector<double> &values, double min, double max, int nbins)
@@ -240,7 +268,7 @@ void MatPlotWidget::hist(const QVector<double> &values, double min, double max, 
 	QwtPlotHistogram *hp = new QwtPlotHistogram();
 	hp->setRenderHint(QwtPlotItem::RenderAntialiased, true);
 	hp->setBrush(QColor(53,42,134));
-	hp->setPen(QPen(QColor(0,0,0), 1.0));
+	hp->setPen(QPen(palette().color(QPalette::WindowText), 1.0));
 	hp->setSamples(samples);
 	hp->attach(d);
 
