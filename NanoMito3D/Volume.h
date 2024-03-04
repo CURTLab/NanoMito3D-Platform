@@ -1,6 +1,6 @@
 ﻿/****************************************************************************
  *
- * Copyright (C) 2022 Fabian Hauser
+ * Copyright (C) 2022-2024 Fabian Hauser
  *
  * Author: Fabian Hauser <fabian.hauser@fh-linz.at>
  * University of Applied Sciences Upper Austria - Linz - Austra
