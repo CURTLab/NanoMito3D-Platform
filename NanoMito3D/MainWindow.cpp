@@ -82,7 +82,9 @@ MainWindow::MainWindow(QWidget *parent)
 
 	connect(m_ui->actionExportRenderer, &QAction::triggered,
 			  this, [this]() {
-		QString fileName = QFileDialog::getSaveFileName(this, tr("Export Renderer"), "", "Image (*.png)");
+		QFileInfo fi(m_currentFile);
+		QString fileName = fi.absoluteFilePath() + "/" + fi.baseName() + ".png";
+		fileName = QFileDialog::getSaveFileName(this, tr("Export Renderer"), fileName, "Image (*.png)");
 		if (fileName.isEmpty())
 			return;
 		m_ui->volumeView->saveAsPNG(fileName);
@@ -254,7 +256,9 @@ MainWindow::~MainWindow()
 
 void MainWindow::exportVolumeDialog(const Volume &volume, const QString &name)
 {
-	QString fileName = QFileDialog::getSaveFileName(this, tr("Export %1").arg(name), "", "TIF Stack (*.tif)");
+	QFileInfo fi(m_currentFile);
+	QString fileName = fi.absoluteFilePath() + "/" + fi.baseName() + ".tif";
+	fileName = QFileDialog::getSaveFileName(this, tr("Export %1").arg(name), fileName, "TIF Stack (*.tif)");
 	if (fileName.isEmpty())
 		return;
 	try {
