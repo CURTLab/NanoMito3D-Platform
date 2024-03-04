@@ -34,5 +34,5 @@ NanoMito3D-Platform contains software applications for:
 * CUDA 7.0
 * CMake 3.18.1
 
-Protobuf version 21.12 is recommended, since starting with version 22 protobuf is using Abseil (which gave me problems).
+[Protobuf version 21.12](https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protobuf-all-21.12.zip) is recommended, since starting with version 22 protobuf is using Abseil (which gave me problems).
 Furthermore, [`TSFProto.proto`](https://github.com/nicost/TSFProto/blob/master/src/TSFProto.proto) by Nico Stuurman is modified to support protobuf-lite and the syntax is set to `proto2`.
