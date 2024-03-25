@@ -16,10 +16,10 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 find_package(OpenCV REQUIRED)
 
 set(PROJECT_SOURCES
-    main.cpp
-    Correction.h Correction.cpp
-    MainWindow.cpp MainWindow.h MainWindow.ui
-    Rendering.h Rendering.cpp
+	main.cpp
+	Correction.h Correction.cpp
+	MainWindow.cpp MainWindow.h MainWindow.ui
+	Rendering.h Rendering.cpp
 )
 
 include_directories("../common" "../widgets")
@@ -27,39 +27,45 @@ include_directories("../common" "../widgets")
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../common ${CMAKE_CURRENT_BINARY_DIR}/common)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../widgets ${CMAKE_CURRENT_BINARY_DIR}/widgets)
 
+set(RELEASE_VERSION OFF CACHE BOOL "Build as release version (No test paths)")
+
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-    qt_add_executable(${CMAKE_PROJECT_NAME}
-        MANUAL_FINALIZATION
-        ${PROJECT_SOURCES}
-    )
+	qt_add_executable(${CMAKE_PROJECT_NAME}
+		MANUAL_FINALIZATION
+		${PROJECT_SOURCES}
+	)
 else()
-    add_executable(${CMAKE_PROJECT_NAME}
-        ${PROJECT_SOURCES}
-    )
+	add_executable(${CMAKE_PROJECT_NAME}
+		${PROJECT_SOURCES}
+	)
 endif()
 
 target_link_libraries(${CMAKE_PROJECT_NAME}
-    PRIVATE
-        Qt${QT_VERSION_MAJOR}::Widgets
-        ${OpenCV_LIBS}
-        Common
-        Widgets
+	PRIVATE
+	Qt${QT_VERSION_MAJOR}::Widgets
+	${OpenCV_LIBS}
+	Common
+	Widgets
 )
 
-target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE "DEV_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/..\"")
+if (RELEASE_VERSION)
+	target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE -DRELEASE_VERSION)
+else()
+	target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE "DEV_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/../\"")
+endif()
 
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
-    MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
-    MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
-    MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
-    MACOSX_BUNDLE TRUE
-    WIN32_EXECUTABLE TRUE
+	MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
+	MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
+	MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+	MACOSX_BUNDLE TRUE
+	WIN32_EXECUTABLE TRUE
 )
 
 install(TARGETS ${CMAKE_PROJECT_NAME}
-    BUNDLE DESTINATION .
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+	BUNDLE DESTINATION .
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 if(QT_VERSION_MAJOR EQUAL 6)
-    qt_finalize_executable(${CMAKE_PROJECT_NAME})
+	qt_finalize_executable(${CMAKE_PROJECT_NAME})
 endif()

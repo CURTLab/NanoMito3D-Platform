@@ -33,6 +33,12 @@
 #include "Rendering.h"
 #include "Version.h"
 
+#ifdef RELEASE_VERSION
+#define DEFAULT_PATH ""
+#else
+#define DEFAULT_PATH DEV_PATH "/examples"
+#endif
+
 MainWindow::MainWindow(QWidget *parent)
 	: QMainWindow(parent)
 	, m_ui(new Ui::MainWindow)
@@ -103,7 +109,7 @@ MainWindow::MainWindow(QWidget *parent)
 	connect(m_ui->buttonSelectFile, &QAbstractButton::clicked,
 			  this, [this]() {
 		m_bar->setVisible(false);
-		QString fileName = QFileDialog::getOpenFileName(this, "Open localization file", DEV_PATH "/examples", "TSF file (*.tsf)");
+		QString fileName = QFileDialog::getOpenFileName(this, "Open localization file", DEFAULT_PATH, "TSF file (*.tsf)");
 		if (!fileName.isEmpty()) {
 			m_ui->statusbar->showMessage(tr("Load %1").arg(QFileInfo(fileName).fileName()));
 			m_ui->frame->setEnabled(false);
@@ -218,7 +224,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::openFileDialog(QLineEdit *edit, const QString &caption, const QString &filter)
 {
-	QString fileName = QFileDialog::getOpenFileName(this, caption, DEV_PATH "/examples", filter);
+	QString fileName = QFileDialog::getOpenFileName(this, caption, DEFAULT_PATH, filter);
 	if (!fileName.isEmpty())
 		edit->setText(fileName);
 }

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 
-project(CellCounterApp VERSION 0.1 LANGUAGES CUDA CXX)
+project(CellCounterApp VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -18,6 +18,8 @@ find_package(OpenCV REQUIRED)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../widgets ${CMAKE_CURRENT_BINARY_DIR}/widgets)
 
 include_directories("../../widgets")
+
+set(RELEASE_VERSION OFF CACHE BOOL "Build as release version (No test paths)")
 
 set(PROJECT_SOURCES
     main.cpp
@@ -44,7 +46,11 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
         Widgets
 )
 
-target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE "DEV_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/../..\"" -DQWT_DLL)
+if (RELEASE_VERSION)
+	target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE -DRELEASE_VERSION)
+else()
+	target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE "DEV_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/../\"")
+endif()
 
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com

@@ -12,6 +12,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CUDA_SUPPORT ON CACHE BOOL "Use CUDA support")
+set(RELEASE_VERSION OFF CACHE BOOL "Build as release version (No test paths)")
 
 if (CUDA_SUPPORT)
 	enable_language(CUDA)
@@ -95,7 +96,6 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE "../common" "../widgets
 if (HDF5_FOUND)
 	message(STATUS "Support hdf5 features")
 	target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE HDF5::HDF5)
-	target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE "DEV_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/../\"")
 endif()
 
 if (CUDA_SUPPORT)
@@ -105,13 +105,20 @@ if (CUDA_SUPPORT)
 	target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 endif()
 
+
+if (RELEASE_VERSION)
+	target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE -DRELEASE_VERSION)
+else()
+	target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE "DEV_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/../\"")
+endif()
+
 # VTK autoinit
 vtk_module_autoinit(
 	TARGETS ${CMAKE_PROJECT_NAME}
 	MODULES ${VTK_LIBRARIES}
 )
 
-target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE "DEV_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/../\"" -D_USE_MATH_DEFINES -DNOMINMAX)
+target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE -D_USE_MATH_DEFINES -DNOMINMAX)
 
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
 	MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
@@ -120,6 +127,11 @@ set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
 	MACOSX_BUNDLE TRUE
 	WIN32_EXECUTABLE TRUE
 )
+
+add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD        # Adds a post-build event to MyTest
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
+	    "${CMAKE_CURRENT_SOURCE_DIR}/../examples/mitoTrainDataSet.csv"      # <--this is in-file
+		$<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>)                 # <--this is out-file path
 
 install(TARGETS ${CMAKE_PROJECT_NAME}
 	BUNDLE DESTINATION .

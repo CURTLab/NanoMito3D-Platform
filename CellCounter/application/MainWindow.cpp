@@ -28,6 +28,12 @@
 #include <QMessageBox>
 #include <QDebug>
 
+#ifdef RELEASE_VERSION
+#define DEFAULT_PATH ""
+#else
+#define DEFAULT_PATH DEV_PATH "/examples"
+#endif
+
 MainWindow::MainWindow(QWidget *parent)
 	: QMainWindow(parent)
 	, m_ui(new Ui::MainWindow)
@@ -60,7 +66,7 @@ MainWindow::MainWindow(QWidget *parent)
 			  );
 
 	connect(m_ui->buttonSelectFile, &QAbstractButton::released, this, [this]() {
-		QString fileName = QFileDialog::getOpenFileName(this, tr("Open image"), DEV_PATH "/examples", tr("Image (*.png *.jpg *.jpeg *.tif *.tiff)"));
+		QString fileName = QFileDialog::getOpenFileName(this, tr("Open image"), DEFAULT_PATH, tr("Image (*.png *.jpg *.jpeg *.tif *.tiff)"));
 		if (fileName.isEmpty())
 			return;
 		import(fileName);

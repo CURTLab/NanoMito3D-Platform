@@ -72,8 +72,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 	setWindowTitle(tr("NanoMito3D r%1").arg(GIT_REVISION));
 
-	m_analyis.loadModel(DEV_PATH "examples/mitoTrainDataSet.csv");
-	//m_analyis.loadModel(DEV_PATH "/examples/mito-model.json");
+	m_analyis.loadModel("mitoTrainDataSet.csv");
 
 	connect(m_ui->actionExportVolume, &QAction::triggered,
 			this, [this]() {
@@ -122,7 +121,9 @@ MainWindow::MainWindow(QWidget *parent)
 		QMessageBox::critical(this, title, errorMessage);
 			  });
 
+#ifndef RELEASE_VERSION
 	m_currentFile = DEV_PATH "examples/";
+#endif
 
 	// localizations loading section
 	connect(m_ui->buttonSelectFile, &QAbstractButton::released,
