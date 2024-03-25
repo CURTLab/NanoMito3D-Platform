@@ -43,6 +43,7 @@ public:
 	~MainWindow();
 
 private slots:
+	void exportSegmentation();
 
 private:
 	void exportVolumeDialog(const Volume &volume, const QString &name);

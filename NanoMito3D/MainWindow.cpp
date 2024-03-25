@@ -71,14 +71,17 @@ MainWindow::MainWindow(QWidget *parent)
 	//m_analyis.loadModel(DEV_PATH "/examples/mito-model.json");
 
 	connect(m_ui->actionExportVolume, &QAction::triggered,
-			  this, [this]() {
+			this, [this]() {
 		exportVolumeDialog(m_analyis.volume(), "volume");
 	});
 
 	connect(m_ui->actionExportFilteredVolume, &QAction::triggered,
-			  this, [this]() {
+			this, [this]() {
 		exportVolumeDialog(m_analyis.filteredVolume(), "filtered volume");
 	});
+
+	connect(m_ui->actionExportSegmentation, &QAction::triggered,
+			this, &MainWindow::exportSegmentation);
 
 	connect(m_ui->actionExportRenderer, &QAction::triggered,
 			  this, [this]() {
@@ -105,7 +108,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 	// localizations loading section
 	connect(m_ui->buttonSelectFile, &QAbstractButton::released,
-			  this, [this]() {
+			this, [this]() {
 		m_bar->setVisible(false);
 		QString fileName = QFileDialog::getOpenFileName(this, "Open localization file", m_currentFile, "TSF File (*.tsf)");
 		if (!fileName.isEmpty()) {
@@ -123,9 +126,11 @@ MainWindow::MainWindow(QWidget *parent)
 	});
 
 	connect(&m_analyis, &AnalyzeMitochondria::localizationsLoaded, this, [this]() {
+		// reset UI
 		m_bar->setVisible(false);
 		m_ui->actionExportVolume->setEnabled(false);
 		m_ui->actionExportFilteredVolume->setEnabled(false);
+		m_ui->actionExportSegmentation->setEnabled(false);
 		m_ui->buttonRender->setEnabled(true);
 		m_ui->buttonAnalyse->setEnabled(false);
 		m_ui->editFile->setText(m_analyis.fileName());
@@ -157,6 +162,8 @@ MainWindow::MainWindow(QWidget *parent)
 			m_ui->volumeView->addLocalizations(m_analyis.localizations(), 1.2f, colors[(channel - 1) % nColors], channel);
 		}
 		m_ui->volumeView->resetCamera();
+
+		m_ui->plot->clear();
 	});
 
 	// volume rendering section
@@ -197,6 +204,7 @@ MainWindow::MainWindow(QWidget *parent)
 		const float r = 200.f;//std::max({segments.volume.voxelSize()[0], segments.volume.voxelSize()[1], segments.volume.voxelSize()[2]});
 
 		m_ui->buttonClassify->setEnabled(true);
+		m_ui->actionExportSegmentation->setEnabled(true);
 		m_ui->volumeView->clear();
 		m_ui->volumeView->addVolume(segments.volume, {0., 0., 1., 0.4});
 		std::vector<std::array<float,3>> endPoints;
@@ -222,6 +230,7 @@ MainWindow::MainWindow(QWidget *parent)
 		m_ui->statusbar->showMessage(tr("Volume successfully classified!"));
 		m_ui->volumeView->clear();
 		m_ui->volumeView->addClassifiedVolume(m_analyis.classifiedVolume(), m_analyis.numClasses());
+		m_ui->actionExportSegmentation->setEnabled(true);
 
 		// text color
 		QColor textColor = palette().color(QPalette::WindowText);
@@ -252,6 +261,31 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
+}
+
+void MainWindow::exportSegmentation()
+{
+	QFileInfo fi(m_currentFile);
+	QString fileName = fi.absoluteFilePath() + "/" + fi.baseName() + ".csv";
+	fileName = QFileDialog::getSaveFileName(this, tr("Export Segmentation"), fileName, "CSV file (*.csv)");
+	if (fileName.isEmpty())
+		return;
+	QFile file(fileName);
+	if (!file.open(QIODevice::WriteOnly)) {
+		QMessageBox::critical(this, tr("Error"), tr("Could not export segmentation!"));
+		return;
+	}
+
+	QTextStream stream(&file);
+	stream << "id;class;numBranches;numEndPoints;numJunctionVoxels;numJunctions;numSlabs;numTriples;numQuadruples;"
+			  "averageBranchLength;maximumBranchLength;shortestPath;voxels;width;height;depth;signalCount\n";
+	for (const auto &s : m_analyis.segments()) {
+		stream << s->id << ';' << s->prediction << ";" << s->data.numBranches << ";" << s->data.numEndPoints << ";"
+				  << s->data.numJunctionVoxels << ";" << s->data.numJunctions << ";" << s->data.numSlabs << ";"
+				  << s->data.numTriples << ";" << s->data.numQuadruples << ";" << s->data.averageBranchLength << ";"
+				  << s->data.maximumBranchLength << ";" << s->data.shortestPath << ";" << s->data.voxels << ";"
+				  << s->data.width << ";" << s->data.height << ";" << s->data.depth << ";" << s->data.signalCount << "\n";
+	}
 }
 
 void MainWindow::exportVolumeDialog(const Volume &volume, const QString &name)

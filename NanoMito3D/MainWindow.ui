@@ -393,6 +393,7 @@
      </property>
      <addaction name="actionExportVolume"/>
      <addaction name="actionExportFilteredVolume"/>
+     <addaction name="actionExportSegmentation"/>
      <addaction name="actionExportRenderer"/>
     </widget>
     <addaction name="menuExport"/>
@@ -431,6 +432,14 @@
   <action name="actionSetBackgroundColor">
    <property name="text">
     <string>Set background color ...</string>
+   </property>
+  </action>
+  <action name="actionExportSegmentation">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Segmentation ...</string>
    </property>
   </action>
  </widget>
