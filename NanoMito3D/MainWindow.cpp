@@ -61,6 +61,11 @@ MainWindow::MainWindow(QWidget *parent)
 	m_ui->buttonAnalyse->setEnabled(false);
 	m_ui->buttonClassify->setEnabled(false);
 
+	m_ui->actionExportVolume->setEnabled(false);
+	m_ui->actionExportFilteredVolume->setEnabled(false);
+	m_ui->actionExportSkeleton->setEnabled(false);
+	m_ui->actionExportSegmentation->setEnabled(false);
+
 #ifndef CUDA_SUPPORT
 	m_ui->checkUseGPU->setVisible(false);
 #endif // CUDA_SUPPORT
@@ -80,6 +85,11 @@ MainWindow::MainWindow(QWidget *parent)
 		exportVolumeDialog(m_analyis.filteredVolume(), "filtered volume");
 	});
 
+	connect(m_ui->actionExportSkeleton, &QAction::triggered,
+			  this, [this]() {
+		exportVolumeDialog(m_analyis.skeleton(), "skeleton volume");
+	});
+
 	connect(m_ui->actionExportSegmentation, &QAction::triggered,
 			this, &MainWindow::exportSegmentation);
 
@@ -92,6 +102,14 @@ MainWindow::MainWindow(QWidget *parent)
 			return;
 		m_ui->volumeView->saveAsPNG(fileName);
 	});
+
+	connect(m_ui->actionSetBackgroundColor, &QAction::triggered, this, [this]() {
+		QColor color = QColorDialog::getColor(m_ui->volumeView->backgroundColor(), this, "Set background color");
+		if (color.isValid())
+			m_ui->volumeView->setBackgroundColor(color);
+	});
+
+	connect(m_ui->actionQuit, &QAction::triggered, this, &MainWindow::close);
 
 	connect(&m_analyis, &AnalyzeMitochondria::progressRangeChanged,
 			  m_bar, &QProgressBar::setRange);
@@ -119,6 +137,10 @@ MainWindow::MainWindow(QWidget *parent)
 			m_ui->buttonAnalyse->setEnabled(false);
 			m_ui->buttonClassify->setEnabled(false);
 
+			m_ui->actionExportVolume->setEnabled(false);
+			m_ui->actionExportFilteredVolume->setEnabled(false);
+			m_ui->actionExportSkeleton->setEnabled(false);
+
 			m_bar->setVisible(true);
 			m_analyis.load(fileName);
 			m_currentFile = fileName;
@@ -131,6 +153,7 @@ MainWindow::MainWindow(QWidget *parent)
 		m_ui->actionExportVolume->setEnabled(false);
 		m_ui->actionExportFilteredVolume->setEnabled(false);
 		m_ui->actionExportSegmentation->setEnabled(false);
+		m_ui->actionExportFilteredVolume->setEnabled(false);
 		m_ui->buttonRender->setEnabled(true);
 		m_ui->buttonAnalyse->setEnabled(false);
 		m_ui->editFile->setText(m_analyis.fileName());
@@ -215,6 +238,7 @@ MainWindow::MainWindow(QWidget *parent)
 		}
 		m_ui->volumeView->addSpheres(endPoints, 0.8f * r, {1.f,0.f,0.f});
 		m_ui->actionExportFilteredVolume->setEnabled(true);
+		m_ui->actionExportSkeleton->setEnabled(true);
 		m_ui->frame->setEnabled(true);
 	});
 
@@ -250,12 +274,6 @@ MainWindow::MainWindow(QWidget *parent)
 		}
 
 		m_ui->frame->setEnabled(true);
-	});
-
-	connect(m_ui->actionSetBackgroundColor, &QAction::triggered, this, [this]() {
-		QColor color = QColorDialog::getColor(m_ui->volumeView->backgroundColor(), this, "Set background color");
-		if (color.isValid())
-			m_ui->volumeView->setBackgroundColor(color);
 	});
 }
 

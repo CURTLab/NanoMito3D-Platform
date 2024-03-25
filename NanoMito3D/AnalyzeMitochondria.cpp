@@ -59,6 +59,8 @@ void AnalyzeMitochondria::load(const QString &fileName, bool threaded)
 			emit progressChanged(static_cast<int>(locs)-1);
 			m_fileName = fileName;
 			emit localizationsLoaded();
+			// increase axial range by 100 nm at each side to avoid clipping
+			m_locs.setAxialRange(m_locs.minZ() - 100.f, m_locs.maxZ() + 100.f);
 		} catch(std::exception &e) {
 			qCritical().nospace() << tr("AnalyzeMitochondria::load Error: ") + e.what();
 			emit error(tr("Load localizations error"), e.what());
@@ -78,6 +80,9 @@ int AnalyzeMitochondria::availableChannels() const
 
 void AnalyzeMitochondria::render(std::array<float, 3> voxelSize, std::array<float, 3> maxPA, int windowSize, int channel, bool densityFilter, int minPts, float radius, bool useGPU, bool threaded)
 {
+#ifndef CUDA_SUPPORT
+	useGPU = false;
+#endif
 	auto func = [this,voxelSize,maxPA,windowSize,channel,minPts,radius,useGPU,densityFilter]() {
 		try {
 			emit progressRangeChanged(0, 0);
@@ -143,6 +148,9 @@ void AnalyzeMitochondria::render(std::array<float, 3> voxelSize, std::array<floa
 
 void AnalyzeMitochondria::analyze(float sigma, ThresholdMethods thresholdMethod, bool useGPU, bool threaded)
 {
+#ifndef CUDA_SUPPORT
+	useGPU = false;
+#endif
 	auto func = [this,sigma,thresholdMethod,useGPU]() {
 		try {
 			m_filteredVolume = Volume(m_volume.size(), m_volume.voxelSize(), m_volume.origin());
@@ -227,6 +235,9 @@ void AnalyzeMitochondria::analyze(float sigma, ThresholdMethods thresholdMethod,
 
 void AnalyzeMitochondria::analyzeSkeleton(Volume filteredVolume, Volume skeleton, bool useGPU, bool threaded)
 {
+#ifndef CUDA_SUPPORT
+	useGPU = false;
+#endif
 	m_filteredVolume = filteredVolume;
 	m_skeleton = skeleton;
 

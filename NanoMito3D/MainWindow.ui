@@ -393,10 +393,14 @@
      </property>
      <addaction name="actionExportVolume"/>
      <addaction name="actionExportFilteredVolume"/>
+     <addaction name="actionExportSkeleton"/>
      <addaction name="actionExportSegmentation"/>
+     <addaction name="separator"/>
      <addaction name="actionExportRenderer"/>
     </widget>
     <addaction name="menuExport"/>
+    <addaction name="separator"/>
+    <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -409,17 +413,11 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionExportVolume">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
    <property name="text">
     <string>Volume ...</string>
    </property>
   </action>
   <action name="actionExportFilteredVolume">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
    <property name="text">
     <string>Filtered volume ...</string>
    </property>
@@ -435,11 +433,21 @@
    </property>
   </action>
   <action name="actionExportSegmentation">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
    <property name="text">
     <string>Segmentation ...</string>
+   </property>
+  </action>
+  <action name="actionExportSkeleton">
+   <property name="text">
+    <string>Skeleton ...</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::NoRole</enum>
+   </property>
+  </action>
+  <action name="actionQuit">
+   <property name="text">
+    <string>Quit</string>
    </property>
   </action>
  </widget>

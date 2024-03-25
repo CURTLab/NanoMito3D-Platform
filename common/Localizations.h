@@ -84,6 +84,11 @@ public:
 	// returns a pointer to the first localization
 	inline const Localization *constData() const { return data(); }
 
+	// set the axial range of the localization dataset
+	inline constexpr void setAxialRange(float minZ, float maxZ) {
+		m_minZ = minZ; m_maxZ = maxZ;
+	}
+
 private:
 	int m_width;
 	int m_height;
