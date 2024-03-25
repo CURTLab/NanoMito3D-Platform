@@ -58,11 +58,13 @@ __global__ void drawPSF_kernel(uint8_t *dVolume, const Localization *dLocs, uint
 	const Localization &l = dLocs[i];
 
 	const float3 pos = make_float3(l.x - origin.x, l.y - origin.y, l.z - origin.z);
+	const float3 pa = make_float3(l.PAx, l.PAy, l.PAz);
 
 	const int ix = static_cast<int>(std::round((pos.x / voxelSize.x)));
 	const int iy = static_cast<int>(std::round((pos.y / voxelSize.y)));
 	const int iz = static_cast<int>(std::round((pos.z / voxelSize.z)));
 
+	const size_t strideY = volumeDims.x;
 	const size_t strideZ = volumeDims.x * volumeDims.y;
 
 	// __device__ ​ float fmaf ( float  x, float  y, float  z )
@@ -75,14 +77,16 @@ __global__ void drawPSF_kernel(uint8_t *dVolume, const Localization *dLocs, uint
 				if ((ix + x < 0) || (iy + y < 0) || (iz + z < 0) ||
 					 (ix + x >= volumeDims.x) || (iy + y >= volumeDims.y) || (iz + z >= volumeDims.z))
 					continue;
-				const size_t addr = (ix + x) + volumeDims.x * (iy + y) + strideZ * (iz + z);
+
+				const size_t addr = (ix + x) + strideY * (iy + y) + strideZ * (iz + z);
 				uint8_t *dst = dVolume + addr;
 
 				const float tx = fmaf(ix + x, voxelSize.x, -pos.x) / l.PAx;
 				const float ty = fmaf(iy + y, voxelSize.y, -pos.y) / l.PAy;
 				const float tz = fmaf(iz + z, voxelSize.z, -pos.z) / l.PAz;
 				const float e = expf(-0.5f * tx * tx -0.5f * ty * ty -0.5f * tz * tz);
-				const uint8_t val = static_cast<uint8_t>(min(fmaf((255.f/windowSize), e, *dst), 255.f));
+				const uint8_t val = static_cast<uint8_t>(fminf(fmaf((255.f/windowSize), e, *dst), 255.f));
+
 				// safely write max to volume
 				atomicMaxU8(dst, val);
 			}

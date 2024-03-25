@@ -42,12 +42,11 @@ __global__ void generateGaussian_kernel(float *d_kernel, int size, float3 sigma)
 	int z = blockIdx.z * blockDim.z + threadIdx.z;
 	if (x >= size || y >= size || z >= size)
 		return;
-	float3 g = make_float3(0.5f/(sigma.x*sigma.x),0.5f/(sigma.y*sigma.y),0.5f/(sigma.z*sigma.z));
 	float f = 1.f/(M_EXP3N*sigma.x*sigma.y*sigma.z);
-	float i = x - size*0.5f;
-	float j = y - size*0.5f;
-	float k = z - size*0.5f;
-	d_kernel[1ull * x + 1ull * y * size + 1ull * z * size * size] = f * exp(-g.x*i*i-g.y*j*j-g.z*k*k);
+	float i = (x - size*0.5f)/sigma.x;
+	float j = (y - size*0.5f)/sigma.y;
+	float k = (z - size*0.5f)/sigma.z;
+	d_kernel[1ull * x + 1ull * y * size + 1ull * z * size * size] = f * exp(-0.5f*i*i-0.5f*j*j-0.5f*k*k);
 }
 
 __global__ void filter3D_kernel(const uint8_t *d_input, uint8_t *d_output, int width, int height, int depth, int size, const float *d_kernel)

@@ -38,6 +38,9 @@ void drawPSF_cpu(uint8_t *volume, const Localization &l, const std::array<int,3>
 	const int iy = static_cast<int>(std::round((posy / voxelSize[1])));
 	const int iz = static_cast<int>(std::round((posz / voxelSize[2])));
 
+	const size_t strideY = volumeDims[0];
+	const size_t strideZ = volumeDims[0] * volumeDims[1];
+
 	const int w = windowSize/2;
 	for (int z = -w; z <= w; ++z) {
 		for (int y = -w; y <= w; ++y) {
@@ -45,12 +48,17 @@ void drawPSF_cpu(uint8_t *volume, const Localization &l, const std::array<int,3>
 				if ((ix + x < 0) || (iy + y < 0) || (iz + z < 0) ||
 					 (ix + x >= volumeDims[0]) || (iy + y >= volumeDims[1]) || (iz + z >= volumeDims[2]))
 					continue;
+
+				const size_t addr = (ix + x) + strideY * (iy + y) + strideZ * (iz + z);
+				uint8_t *dst = volume + addr;
+
 				const float tx = ((ix + x) * voxelSize[0] - posx) / l.PAx;
 				const float ty = ((iy + y) * voxelSize[1] - posy) / l.PAy;
 				const float tz = ((iz + z) * voxelSize[2] - posz) / l.PAz;
-				const float e = (255.f/windowSize)*expf(-0.5f * tx * tx -0.5f * ty * ty -0.5f * tz * tz);
-				auto &val = volume[ix + x + volumeDims[0] * (iy + y) + volumeDims[0] * volumeDims[1] * (iz + z)];
-				val = static_cast<uint8_t>(std::clamp(val + e, 0.f, 255.f));
+				const float e = expf(-0.5f * tx * tx -0.5f * ty * ty -0.5f * tz * tz);
+				const uint8_t val = static_cast<uint8_t>(fminf((255.f/windowSize) * e + *dst, 255.f));
+				// write max to volume
+				*dst = std::max(*dst, val);
 			}
 		}
 	}

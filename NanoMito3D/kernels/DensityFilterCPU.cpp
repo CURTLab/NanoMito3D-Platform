@@ -22,14 +22,12 @@
 
 #include "DensityFilter.h"
 
-#include "Octree.h"
 #include "3dparty/CompactNSearch/CompactNSearch.h"
 
 using namespace CompactNSearch;
 
 Localizations::const_iterator DensityFilter::remove_cpu(Localizations &locs, size_t minPoints, float radius)
 {
-#if 0
 	const size_t nLocs = locs.size();
 
 	std::unique_ptr<float[]> pts(new float[nLocs * 3]);
@@ -52,17 +50,4 @@ Localizations::const_iterator DensityFilter::remove_cpu(Localizations &locs, siz
 	});
 
 	return ret;
-#else
-	// filter by density
-	Octree<uint32_t,float,50> tree(locs.bounds());
-	for (uint32_t i = 0; i < locs.size(); ++i)
-		tree.insert(locs[i].position(), i);
-
-	return std::remove_if(locs.begin(), locs.end(), [&tree](const Localization &l) {
-		const float radius = 250;
-		int minPoints = 10;
-		const auto pts = tree.countInSphere(l.position(), radius);
-		return pts < minPoints;
-	});
-#endif
 }

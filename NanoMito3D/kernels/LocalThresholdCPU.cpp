@@ -33,72 +33,61 @@
 #undef max
 #endif // CUDA_SUPPORT
 
-int calcHist(const Volume &input, uint16_t hist[256], int x, int y, int z, int r)
-{
-	std::fill_n(hist, 256, static_cast<uint16_t>(0));
-
-	const int x0 = std::max(x - r, 0);
-	const int x1 = std::min(x + r, input.width() - 1);
-
-	const int y0 = std::max(y - r, 0);
-	const int y1 = std::min(y + r, input.height() - 1);
-
-	const int z0 = std::max(z - r, 0);
-	const int z1 = std::min(z + r, input.depth() - 1);
-
-	int numVoxels = 0;
-	for (int z = z0; z <= z1; ++z) {
-		for (int y = y0; y <= y1; ++y) {
-			for (int x = x0; x <= x1; ++x) {
-				++hist[input(x, y, z)];
-				++numVoxels;
-			}
-		}
-	}
-	return numVoxels;
-}
-
 void LocalThreshold::localThrehsold_cpu(Method method, const Volume &input, Volume &output, int windowSize, std::function<void (uint32_t, uint32_t)> cb)
 {
 	Volume result(input.size(), input.voxelSize(), input.origin());
 	result.fill(0);
 
+	const int nFilter = windowSize * windowSize * windowSize;
+	const int nVoxels = static_cast<int>(input.voxels());
+
 	const auto numThreads = std::thread::hardware_concurrency();
-	const size_t pack = (input.voxels() + numThreads - 1) / numThreads;
+	const int pack = (nVoxels + numThreads - 1) / numThreads;
 
 	std::atomic_int counter(0);
 
+	// calculate linear offsets within the window
+	std::shared_ptr<int[]> filterOffsets(new int[nFilter]);
+	int *idx = filterOffsets.get();
+	const int r = windowSize/2;
+	for (int k = -r; k <= r; ++k) {
+		for (int j = -r; j <= r; ++j) {
+			for (int i = -r; i <= r; ++i)
+				*idx++ = i + j * input.width() + k * input.width() * input.height();
+		}
+	}
+
 	// multi-threaded implementation
 	std::vector<std::thread> threads;
-	for (size_t offset = 0; offset < input.voxels(); offset += pack) {
-		threads.emplace_back(std::thread([offset,&pack,&method,&input,&result,windowSize,&cb,&counter]() {
-			const uint32_t n = static_cast<uint32_t>(input.voxels());
+	for (int offset = 0; offset < nVoxels; offset += pack) {
+		threads.emplace_back(std::thread([offset,&pack,method,&input,&result,&cb,&counter,nFilter,nVoxels,filterOffsets]() {
+			const uint32_t n = static_cast<uint32_t>(nVoxels);
 
 			uint16_t hist[256];
 
-			const size_t begin = offset;
-			const size_t end = std::min(offset + pack, input.voxels());
+			const int begin = offset;
+			const int end = std::min(offset + pack, nVoxels);
 
 			uint8_t *dst = result.data() + begin;
 			const uint8_t *src = input.constData() + begin;
-			for (size_t i = begin; i < end; ++i, ++dst, ++src) {
-				const auto idx = input.mapIndex(i);
-				// calc local histogram
-				const int numVoxels = calcHist(input, hist, idx[0], idx[1], idx[2], windowSize/2);
+			for (int i = begin; i < end; ++i, ++dst, ++src) {
+				std::fill_n(hist, 256, static_cast<uint16_t>(0));
 
-				// skip if all zero
-				if (hist[0] == numVoxels) {
-					*dst = 0;
-					continue;
+				for (int j = 0; j < nFilter; ++j) {
+					// index for 3D window
+					const int idx2 = i + filterOffsets[j];
+					const int histIdx = (idx2 >= 0 && idx2 < nVoxels) ? input.constData()[idx2] : 0;
+					hist[histIdx]++;
 				}
 
-				// threshold
-				uint8_t threshold = 0;
-				if (method == LocalThreshold::Otsu)
-					threshold = otsuThreshold(hist, numVoxels);
+				if (hist[0] == nFilter)
+					*dst = 0;
+				else if (method == LocalThreshold::Otsu)
+					*dst = (*src >= LocalThreshold::otsuThreshold(hist, nFilter) ? 255 : 0);
 				else if (method == LocalThreshold::IsoData)
-					threshold = isoDataThreshold(hist, numVoxels);
-				*dst = *src >= threshold ? 255 : 0;
+					*dst = (*src >= LocalThreshold::isoDataThreshold(hist, nFilter) ? 255 : 0);
+				else
+					*dst = 0;
 
 				// optional progress indicator
 				if (cb)
