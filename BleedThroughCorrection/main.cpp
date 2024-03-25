@@ -23,17 +23,13 @@
 #include "MainWindow.h"
 
 #include <QApplication>
-#include <QFile>
+#include <QStyleFactory>
 
 int main(int argc, char *argv[])
 {
 	QApplication a(argc, argv);
 
-	QFile style(":/style/dark.qss");
-	if (style.open(QIODevice::ReadOnly)) {
-		a.setStyleSheet(style.readAll());
-		style.close();
-	}
+	a.setStyle(QStyleFactory::create("Fusion"));
 
 	MainWindow w;
 	w.show();
