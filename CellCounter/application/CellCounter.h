@@ -25,7 +25,6 @@
 
 #include <QObject>
 #include <QString>
-#include <memory>
 #include <opencv2/opencv.hpp>
 #include <opencv2/dnn.hpp>
 
@@ -40,6 +39,7 @@ public:
 	void predictAsync(const cv::Mat &input, int subDivisions, int batchSize, bool rotation = false);
 
 	inline constexpr const cv::Mat &result() const { return m_result; }
+	inline constexpr const QString &lastError() const { return m_lastError; }
 
 signals:
 	void progressValueChanged(int progress);
@@ -59,6 +59,7 @@ private:
 	cv::Rect m_paddedRoi;
 	bool m_rotation;
 	cv::Mat m_padded;
+	QString m_lastError;
 
 };
 

@@ -82,7 +82,8 @@ MainWindow::MainWindow(QWidget *parent)
 
 		const cv::Mat &output = m_model.result();
 		if (output.empty()) {
-			QMessageBox::critical(this, tr("Error"), tr("Could not process image!"));
+			QMessageBox::critical(this, tr("Error"), tr("Could not process image!\nReason: %1").arg(m_model.lastError()));
+			m_ui->frame->setEnabled(true);
 			return;
 		}
 

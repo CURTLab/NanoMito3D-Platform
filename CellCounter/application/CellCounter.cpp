@@ -33,9 +33,13 @@ CellCounter::CellCounter(QObject *parent)
 
 bool CellCounter::loadModel(QString model)
 {
+	m_lastError = {};
+
 	m_model = cv::dnn::readNet(model.toStdString());
-	if (m_model.empty())
+	if (m_model.empty()) {
+		m_lastError = QString("Could not load model: '%1'").arg(model);
 		return false;
+	}
 	m_windowSize = 128;
 
 	return true;
@@ -43,6 +47,8 @@ bool CellCounter::loadModel(QString model)
 
 void CellCounter::predictAsync(const cv::Mat &input, int subDivisions, int batchSize, bool rotation)
 {
+	m_lastError = {};
+
 	m_rotation = rotation;
 	m_subDivisions = subDivisions;
 	m_result = cv::Mat{};
@@ -84,79 +90,82 @@ void CellCounter::predictAsync(const cv::Mat &input, int subDivisions, int batch
 
 	qDebug() << "Start async with" << n << "regions";
 	QThreadPool::globalInstance()->start([this]() {
-		const int n = m_rotation ? 4 * m_regions.size() : m_regions.size();
+		try {
+			const int n = m_rotation ? 4 * m_regions.size() : m_regions.size();
 
-		emit progressRangeChanged(0, n / m_batchSize + 1);
-		emit progressValueChanged(0);
+			emit progressRangeChanged(0, n / m_batchSize + 1);
+			emit progressValueChanged(0);
 
-		const int advance = m_rotation ? m_batchSize / 4 : m_batchSize;
-		auto begin = m_regions.begin();
-		auto end = m_regions.begin() + advance;
+			const int advance = m_rotation ? m_batchSize / 4 : m_batchSize;
+			auto begin = m_regions.begin();
+			auto end = m_regions.begin() + advance;
 
-		cv::Mat tiles({m_batchSize, m_windowSize, m_windowSize}, CV_32F);
-		cv::Mat output(m_padded.size[0], m_padded.size[1], CV_32F, 0.f);
+			cv::Mat tiles({m_batchSize, 1, m_windowSize, m_windowSize}, CV_32F);
+			cv::Mat output(m_padded.size[0], m_padded.size[1], CV_32F, 0.f);
 
-		for (int i = 0; begin < m_regions.end(); ++i) {
-			if (end > m_regions.end())
-				end = m_regions.end();
+			for (int i = 0; begin < m_regions.end(); ++i) {
+				if (end > m_regions.end())
+					end = m_regions.end();
 
-			float *ptr = tiles.ptr<float>();
-			for (auto it = begin; it != end; ++it) {
-				cv::Mat tmp, dest;
+				float *ptr = tiles.ptr<float>();
+				for (auto it = begin; it != end; ++it) {
+					cv::Mat tmp, dest;
 
-				dest = cv::Mat(m_windowSize, m_windowSize, CV_32F, ptr);
-				m_padded(*it).convertTo(dest, CV_32F, 1.f/255);
-				ptr += dest.total();
-
-				for (int j = 0; m_rotation && j < 2; ++j) {
 					dest = cv::Mat(m_windowSize, m_windowSize, CV_32F, ptr);
-					ptr += dest.total();
-					Q_ASSERT((int)std::distance(tiles.ptr<float>(), ptr) < tiles.total());
-
 					m_padded(*it).convertTo(dest, CV_32F, 1.f/255);
+					ptr += dest.total();
 
-					cv::rotate(dest, dest, j); // cv::ROTATE_90_CLOCKWISE, ROTATE_180, ROTATE_90_COUNTERCLOCKWISE
+					for (int j = 0; m_rotation && j < 2; ++j) {
+						dest = cv::Mat(m_windowSize, m_windowSize, CV_32F, ptr);
+						ptr += dest.total();
+						Q_ASSERT((int)std::distance(tiles.ptr<float>(), ptr) < tiles.total());
+
+						m_padded(*it).convertTo(dest, CV_32F, 1.f/255);
+
+						cv::rotate(dest, dest, j); // cv::ROTATE_90_CLOCKWISE, ROTATE_180, ROTATE_90_COUNTERCLOCKWISE
+					}
 				}
-			}
 
-			cv::Mat data;
-			if (!predict(tiles, data) || (data.dims != 3) || (data.size[1] != m_windowSize) || (data.size[2] != m_windowSize)) {
-				throw std::runtime_error("Error during prediction!");
-			}
+				cv::Mat data;
+				if (!predict(tiles, data) || (data.dims != 3) || (data.size[1] != m_windowSize) || (data.size[2] != m_windowSize)) {
+					throw std::runtime_error("Error during prediction!");
+				}
 
-			cv::Mat wind = splineWindow(m_windowSize);
-			float *raw_data = data.ptr<float>();
-			for (auto it = begin; it != end; ++it) {
-				cv::Mat src(m_windowSize, m_windowSize, CV_32F, 0.f);
-				cv::Mat rot, tmp;
+				cv::Mat wind = splineWindow(m_windowSize);
+				float *raw_data = data.ptr<float>();
+				for (auto it = begin; it != end; ++it) {
+					cv::Mat src(m_windowSize, m_windowSize, CV_32F, 0.f);
+					cv::Mat rot, tmp;
 
-				tmp = cv::Mat(m_windowSize, m_windowSize, CV_32F, (void*)raw_data);
-				raw_data += tmp.total();
-				src += tmp;
-
-				for (int j = 2; m_rotation && j != 0; --j) {
 					tmp = cv::Mat(m_windowSize, m_windowSize, CV_32F, (void*)raw_data);
 					raw_data += tmp.total();
-					cv::rotate(tmp, rot, j);
-					src += rot;
-				}
-				if (m_rotation)
-					src /= 4.f;
+					src += tmp;
 
-				output(*it) += m_subDivisions > 1 ? src.mul(wind) : src;
+					for (int j = 2; m_rotation && j != 0; --j) {
+						tmp = cv::Mat(m_windowSize, m_windowSize, CV_32F, (void*)raw_data);
+						raw_data += tmp.total();
+						cv::rotate(tmp, rot, j);
+						src += rot;
+					}
+					if (m_rotation)
+						src /= 4.f;
+
+					output(*it) += m_subDivisions > 1 ? src.mul(wind) : src;
+				}
+
+				begin += advance;
+				end += advance;
+
+				emit progressValueChanged(i + 1);
 			}
 
-			begin += advance;
-			end += advance;
+			m_padded = cv::Mat();
+			m_result = output(m_paddedRoi) / std::pow(m_subDivisions, 2.0);
 
-			emit progressValueChanged(i + 1);
+			emit progressValueChanged(n / m_batchSize);
+		} catch (std::exception &e) {
+			m_lastError = QString("Async prediction error: %1").arg(e.what());
 		}
-
-		m_padded = cv::Mat();
-		m_result = output(m_paddedRoi) / std::pow(m_subDivisions, 2.0);
-
-		emit progressValueChanged(n / m_batchSize);
-
 		emit finished();
 	});
 }
@@ -165,11 +174,17 @@ bool CellCounter::predict(const cv::Mat &input, cv::Mat &output)
 {
 	const int n = input.size[0];
 
+#if 0
+	// ToDo: find out since when this is changed
 	cv::Mat inputBlob = cv::dnn::blobFromImages(input);
 	if (inputBlob.size[0] != n)
 		return false;
 
 	m_model.setInput(inputBlob);
+#else
+	// input: [n, 1, windowSize, windowSize]
+	m_model.setInput(input);
+#endif
 
 	output = cv::Mat({n, 1, m_windowSize, m_windowSize}, CV_32F);
 	m_model.forward(output);
