@@ -6,3 +6,5 @@ build-*
 *.pb.cc
 *.pb.h
 *.autosave
+*.dll
+*.pyd
