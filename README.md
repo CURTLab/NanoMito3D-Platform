@@ -13,26 +13,38 @@ NanoMito3D-Platform contains software applications for:
 * [AnalyzeSkeleton](https://imagej.net/plugins/analyze-skeleton) (ImageJ Plugin)
 * [cuNSearch](https://github.com/InteractiveComputerGraphics/cuNSearch) (compute neighborhood information on GPU)
 
+### Python wrapper
+A python wrapper for the CUDA accelerated mitochondria segmentation and classisifcation is available in the subfolder `python`.
+
+### Voxel classification results
+Exact values for the percentage classification of the voxels cannot be guaranteed, but the tendency of the classification is correct. Furthermore, in the current OpenCV implementation of Random Forest, it is not possible to set a fixed seed, and different versions produce different results. To mitigate this discrepancy, a deep neural network classifier could be trained instead of Random Forest.
+
 ## CellCounter Application
 ![Thumbnail](https://raw.githubusercontent.com/CURTLab/NanoMito3D-Platform/main/thumbnail_cellcounter.png)
 
 ## BleedThroughCorrection Application
 ![Thumbnail](https://raw.githubusercontent.com/CURTLab/NanoMito3D-Platform/main/thumbnail_bleedthroughcorr.PNG)
 
+# Citation
+
+Please cite our paper [Single Molecule Studies of Dynamic Platelet Interactions with Endothelial Cells](https://www.frontiersin.org/articles/10.3389/fbioe.2024.1372807), Front. Bioeng. Biotechnol., Volume 12, (2024) (DOI: [10.3389/fbioe.2024.1372807](https://www.frontiersin.org/articles/10.3389/fbioe.2024.1372807))
+
 # 3rd-party libaries:
 * [cuNSearch](https://github.com/InteractiveComputerGraphics/cuNSearch)
 * [CompactNSearch](https://github.com/InteractiveComputerGraphics/CompactNSearch)
 
 # Tested prerequisites for compilation
-* Windows 10
+* Windows 10/11
 * Visual Studio 2019
-* QT 5.15.2/6.4.2
-* OpenCV 4.5.5
-* VTK 9.0/9.2.6
+* QT 5.15.2/6.4.2/6.6.2
+* OpenCV 4.5.5/4.9.0
+* VTK 9.0/9.2.6/9.3.0
 * Qwt 6.1.6/6.2.0
 * protobuf 21.12/3.21.9
 * CUDA 7.0
 * CMake 3.18.1
+* Python 3.12
 
-[Protobuf version 21.12](https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protobuf-all-21.12.zip) is recommended, since starting with version 22 protobuf is using Abseil (which gave me problems).
-Furthermore, [`TSFProto.proto`](https://github.com/nicost/TSFProto/blob/master/src/TSFProto.proto) by Nico Stuurman is modified to support protobuf-lite and the syntax is set to `proto2`.
+# Protobuf
+* [Protobuf version 21.12](https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protobuf-all-21.12.zip) is recommended, since starting with version 22 protobuf is using Abseil (which gave me problems).
+* [`TSFProto.proto`](https://github.com/nicost/TSFProto/blob/master/src/TSFProto.proto) by Nico Stuurman is modified to support protobuf-lite and the syntax is set to `proto2`.
