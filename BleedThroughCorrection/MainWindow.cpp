@@ -101,7 +101,7 @@ MainWindow::MainWindow(QWidget *parent)
 		}
 	});
 
-	setWindowTitle(tr("Bleed-Through Correction r%1").arg(GIT_REVISION));
+	setWindowTitle("Bleed-Through Correction " APP_VERSION);
 
 	m_ui->buttonRender->setEnabled(false);
 	m_ui->buttonCorrect->setEnabled(false);

@@ -27,8 +27,6 @@ include_directories("../common" "../widgets")
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../common ${CMAKE_CURRENT_BINARY_DIR}/common)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../widgets ${CMAKE_CURRENT_BINARY_DIR}/widgets)
 
-set(RELEASE_VERSION OFF CACHE BOOL "Build as release version (No test paths)")
-
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
 	qt_add_executable(${CMAKE_PROJECT_NAME}
 		MANUAL_FINALIZATION
