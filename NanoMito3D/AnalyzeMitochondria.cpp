@@ -60,7 +60,7 @@ void AnalyzeMitochondria::load(const QString &fileName, bool threaded)
 			m_fileName = fileName;
 			emit localizationsLoaded();
 			// increase axial range by 100 nm at each side to avoid clipping
-			m_locs.setAxialRange(m_locs.minZ() - 100.f, m_locs.maxZ() + 100.f);
+			//m_locs.setAxialRange(m_locs.minZ() - 100.f, m_locs.maxZ() + 100.f);
 		} catch(std::exception &e) {
 			qCritical().nospace() << tr("AnalyzeMitochondria::load Error: ") + e.what();
 			emit error(tr("Load localizations error"), e.what());
@@ -370,7 +370,7 @@ void AnalyzeMitochondria::classify(bool threaded)
 
 			emit progressRangeChanged(0, static_cast<int>(m_segments.size())-1);
 			for (size_t i = 0; i < m_segments.size(); ++i) {
-				cv::Mat dataSet(1, 14, CV_32FC1, &m_segments[i]->data);
+				cv::Mat dataSet(1, 14, CV_32FC1, m_segments[i]->data.values);
 				m_dtree->predict(dataSet, result, 0);
 
 				const int prediction = qRound(result.at<float>(0, 0));
@@ -405,8 +405,11 @@ void AnalyzeMitochondria::classify(bool threaded)
 		func();
 }
 
-void AnalyzeMitochondria::loadModel(const QString &fileName)
+bool AnalyzeMitochondria::loadModel(const QString &fileName)
 {
+	// clear model
+	m_dtree = {};
+
 	const auto fi = QFileInfo(fileName);
 	if (fi.completeSuffix().toLower() == "csv") {
 		// load header names from csv
@@ -418,7 +421,7 @@ void AnalyzeMitochondria::loadModel(const QString &fileName)
 			file.close();
 		} else {
 			emit error(tr("Load model"), tr("Could not load dataset! (%1)").arg(fileName));
-			return;
+			return false;
 		}
 
 		// generate training data from csv
@@ -438,7 +441,7 @@ void AnalyzeMitochondria::loadModel(const QString &fileName)
 		m_dtree->setMaxCategories(m_numClasses+1);
 		if (!m_dtree->train(trainData, cv::ml::ROW_SAMPLE, targetData)) {
 			emit error(tr("Load model"), tr("Could not train loaded dataset! (%1)").arg(fileName));
-			return;
+			return false;
 		}
 
 		// print variable importance
@@ -458,7 +461,7 @@ void AnalyzeMitochondria::loadModel(const QString &fileName)
 			m_numClasses = class_labels.size();
 		} else {
 			emit error(tr("Load model"), tr("Could not load dataset! (%1)").arg(fileName));
-			return;
+			return false;
 		}
 		// load model
 		m_dtree = cv::ml::StatModel::load<cv::ml::RTrees>(fileName.toStdString());
@@ -466,9 +469,11 @@ void AnalyzeMitochondria::loadModel(const QString &fileName)
 
 	if (m_dtree.empty()) {
 		emit error(tr("Load model"), tr("Could not load model %1").arg(fileName));
-		return;
+		return false;
 	}
 
 	qDebug() << "Samples:" << m_dtree->getVarCount();
 	qDebug() << "Num classes:" << m_numClasses;
+
+	return true;
 }

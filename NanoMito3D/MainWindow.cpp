@@ -66,13 +66,20 @@ MainWindow::MainWindow(QWidget *parent)
 	m_ui->actionExportSkeleton->setEnabled(false);
 	m_ui->actionExportSegmentation->setEnabled(false);
 
+	m_ui->comboThreshold->addItem("Local IsoData", QVariant::fromValue(ThresholdMethods::LocalISOData));
+	m_ui->comboThreshold->addItem("Local Otsu", QVariant::fromValue(ThresholdMethods::LocalOtsu));
+
 #ifndef CUDA_SUPPORT
 	m_ui->checkUseGPU->setVisible(false);
 #endif // CUDA_SUPPORT
 
-	setWindowTitle(tr("NanoMito3D r%1").arg(GIT_REVISION));
+	setWindowTitle("NanoMito3D " APP_VERSION);
 
-	m_analyis.loadModel("mitoTrainDataSet.csv");
+	const QString modelFile = "mitoTrainDataSet.csv";
+	if (QFile(modelFile).exists()) {
+		if (m_analyis.loadModel(modelFile))
+			m_ui->editModel->setText(QFileInfo(modelFile).absoluteFilePath());
+	}
 
 	connect(m_ui->actionExportVolume, &QAction::triggered,
 			this, [this]() {
@@ -129,7 +136,7 @@ MainWindow::MainWindow(QWidget *parent)
 	connect(m_ui->buttonSelectFile, &QAbstractButton::released,
 			this, [this]() {
 		m_bar->setVisible(false);
-		QString fileName = QFileDialog::getOpenFileName(this, "Open localization file", m_currentFile, "TSF File (*.tsf)");
+		QString fileName = QFileDialog::getOpenFileName(this, "Open localization file", m_currentFile, "TSF file (*.tsf)");
 		if (!fileName.isEmpty()) {
 			m_ui->statusbar->showMessage(tr("Load %1").arg(QFileInfo(fileName).fileName()));
 			m_ui->frame->setEnabled(false);
@@ -146,6 +153,16 @@ MainWindow::MainWindow(QWidget *parent)
 			m_analyis.load(fileName);
 			m_currentFile = fileName;
 		}
+	});
+
+	// model selection
+	connect(m_ui->buttonSelectModel, &QAbstractButton::released,
+			this, [this]() {
+		QString fileName = QFileDialog::getOpenFileName(this, "Open model file", m_ui->editModel->text(), "Model file (*.json *.csv)");
+		if (fileName.isEmpty())
+			return;
+		if (m_analyis.loadModel(fileName))
+			m_ui->editModel->setText(QFileInfo(fileName).absoluteFilePath());
 	});
 
 	connect(&m_analyis, &AnalyzeMitochondria::localizationsLoaded, this, [this]() {
@@ -218,7 +235,7 @@ MainWindow::MainWindow(QWidget *parent)
 		m_ui->frame->setEnabled(false);
 		m_bar->setVisible(true);
 		m_ui->statusbar->showMessage(tr("Analyzing volume ..."));
-		m_analyis.analyze(m_ui->spinGaussianSigma->value(), (ThresholdMethods)m_ui->comboThreshold->currentIndex(), m_ui->checkUseGPU->isChecked());
+		m_analyis.analyze(m_ui->spinGaussianSigma->value(),  m_ui->comboThreshold->currentData().value<ThresholdMethods>(), m_ui->checkUseGPU->isChecked());
 	});
 
 	connect(&m_analyis, &AnalyzeMitochondria::volumeAnalyzed, this, [this]() {

@@ -24,8 +24,6 @@
 #include "Device.h"
 
 #include <stdexcept>
-#include <string>
-#include <assert.h>
 
 #define BLOCK_SIZE 256
 #define BLOCK_SIZE2 16
@@ -53,25 +51,55 @@ __global__ void local_threshold_kernel2D(LocalThreshold::Method method, const ui
 	uint16_t hist[256];
 	for (int i = 0; i < 256; ++i) hist[i] = 0;
 
-	int num_pixels = fsize;
+	//int nVoxels = fsize;
+	int nVoxels = 0;
 	const idx_t *f = c_filterOffsets;
 	for (idx_t i = 0; i < fsize; ++i, f++) {
 		const idx_t idx2 = idx + *f;
-		if (idx2 >= 0 && idx2 < voxels)
-			hist[d_input[idx2]]++;
-		else
-			hist[0]++;
+		if (idx2 >= 0 && idx2 < voxels) {
+			++hist[d_input[idx2]];
+			++nVoxels;
+		}
+		//else hist[0]++;
 	}
 
 	if (method == LocalThreshold::Otsu)
-		d_output[idx] = (d_input[idx] >= LocalThreshold::otsuThreshold(hist, num_pixels) ? 255 : 0);
+		d_output[idx] = (d_input[idx] >= LocalThreshold::otsuThreshold(hist, nVoxels) ? 255 : 0);
 	else if (method == LocalThreshold::IsoData)
-		d_output[idx] = (d_input[idx] >= LocalThreshold::isoDataThreshold(hist, num_pixels) ? 255 : 0);
+		d_output[idx] = (d_input[idx] >= LocalThreshold::isoDataThreshold(hist, nVoxels) ? 255 : 0);
 	else
 		d_output[idx] = 0;
 }
 
-void LocalThreshold::localThrehsold_gpu(Method method, const Volume &input, Volume &output, int windowSize)
+__global__ void local_threshold_kernel1D(LocalThreshold::Method method, const uint8_t *d_input, uint8_t *d_output, idx_t voxels, idx_t nFilter)
+{
+	const int block = blockIdx.x * blockDim.x;
+	const int idx = block + threadIdx.x;
+
+	if (idx >= voxels)
+		return;
+
+	uint16_t hist[256];
+	for (int i = 0; i < 256; ++i) hist[i] = 0;
+
+	for (idx_t i = 0; i < nFilter; ++i) {
+		// index for 3D window
+		const idx_t idx2 = idx + c_filterOffsets[i];
+		const idx_t histIdx = (idx2 >= 0 && idx2 < voxels) ? d_input[idx2] : 0;
+		hist[histIdx]++;
+	}
+
+	if (hist[0] == nFilter)
+		d_output[idx] = 0;
+	else if (method == LocalThreshold::Otsu)
+		d_output[idx] = (d_input[idx] >= LocalThreshold::otsuThreshold(hist, nFilter) ? 255 : 0);
+	else if (method == LocalThreshold::IsoData)
+		d_output[idx] = (d_input[idx] >= LocalThreshold::isoDataThreshold(hist, nFilter) ? 255 : 0);
+	else
+		d_output[idx] = 0;
+}
+
+void LocalThreshold::localThrehsold_gpu(Method method, const Volume &input, Volume &output, int windowSize, bool original)
 {
 	// check output dims
 	if ((input.width() != output.width()) ||
@@ -104,14 +132,22 @@ void LocalThreshold::localThrehsold_gpu(Method method, const Volume &input, Volu
 	delete [] filterOffsets;
 
 	idx_t voxels = static_cast<idx_t>(input.voxels());
-	const size_t zStride = static_cast<size_t>(input.width()) * input.height();
-	// 2D kernel
-	const dim3 block(BLOCK_SIZE2, BLOCK_SIZE2);
-	const dim3 grid((input.width() + block.x - 1)/block.x,
-					(input.height() + block.y - 1)/block.y);
+	if (original) {
+		int batchSize = BLOCK_SIZE * 1024;
+		const dim3 block(BLOCK_SIZE);
+		const dim3 grid((static_cast<uint32_t>(batchSize) + block.x - 1)/block.x);
+		for (idx_t i = 0; i < voxels; i += batchSize)
+			local_threshold_kernel1D<<<grid,block>>>(method, d_input + i, d_output + i, voxels - i, nFilter);
+	} else {
+		const size_t zStride = static_cast<size_t>(input.width()) * input.height();
+		// 2D kernel
+		const dim3 block(BLOCK_SIZE2, BLOCK_SIZE2);
+		const dim3 grid((input.width() + block.x - 1)/block.x,
+						(input.height() + block.y - 1)/block.y);
 
-	for (int i = 0; i < input.depth(); ++i)
-		local_threshold_kernel2D<<<grid,block>>>(method, d_input, d_output, i, input.width(), input.height(), input.depth(), voxels, windowSize);
+		for (int i = 0; i < input.depth(); ++i)
+			local_threshold_kernel2D<<<grid,block>>>(method, d_input, d_output, i, input.width(), input.height(), input.depth(), voxels, windowSize);
+	}
 
 	cudaMemcpy(output.data(), d_output, input.voxels(), cudaMemcpyDeviceToHost);
 	GPU::cudaCheckError();

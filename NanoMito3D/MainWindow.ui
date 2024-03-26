@@ -317,30 +317,40 @@
             </widget>
            </item>
            <item row="1" column="1">
-            <widget class="QComboBox" name="comboThreshold">
-             <item>
-              <property name="text">
-               <string>Local IsoData</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Local Otsu</string>
-              </property>
-             </item>
-            </widget>
+            <widget class="QComboBox" name="comboThreshold"/>
            </item>
-           <item row="2" column="1">
+           <item row="3" column="1">
             <widget class="QPushButton" name="buttonAnalyse">
              <property name="text">
               <string>Analyze</string>
              </property>
             </widget>
            </item>
-           <item row="3" column="1">
+           <item row="4" column="1">
             <widget class="QPushButton" name="buttonClassify">
              <property name="text">
               <string>Classify</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <layout class="QHBoxLayout" name="horizontalLayout_5">
+             <item>
+              <widget class="QLineEdit" name="editModel"/>
+             </item>
+             <item>
+              <widget class="QToolButton" name="buttonSelectModel">
+               <property name="text">
+                <string>...</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_14">
+             <property name="text">
+              <string>Model:</string>
              </property>
             </widget>
            </item>

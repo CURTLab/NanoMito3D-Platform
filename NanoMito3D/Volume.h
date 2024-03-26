@@ -44,9 +44,11 @@ public:
 	// fill the volume with value
 	void fill(uint8_t value);
 
+#ifdef USE_OPENCV
 	// load a tiff stack as volume
 	static Volume loadTif(const std::string &fileName, std::array<float,3> voxelSize = {1.f,1.f,1.f}, std::array<float,3> origin = {0.f});
 	void saveTif(const std::string &fileName) const;
+#endif // USE_OPENCV
 
 #ifdef USE_H5
 	// load and save volume as h5 file

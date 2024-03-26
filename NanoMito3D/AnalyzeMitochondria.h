@@ -30,7 +30,6 @@
 #include "Volume.h"
 #include "Localizations.h"
 #include "Segments.h"
-#include "AnalyzeSkeleton.h"
 
 enum class ThresholdMethods {
 	LocalISOData,
@@ -61,7 +60,7 @@ public:
 	void classify(bool threaded = true);
 
 	// load model eighter from csv training dataset or pretrained json model file
-	void loadModel(const QString &fileName);
+	bool loadModel(const QString &fileName);
 
 	inline constexpr const QString &fileName() const { return m_fileName; }
 	inline constexpr const Localizations &localizations() const { return m_locs; }

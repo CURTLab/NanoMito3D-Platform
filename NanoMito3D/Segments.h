@@ -24,29 +24,31 @@
 
 #include <vector>
 #include <string>
-#include <opencv2/opencv.hpp>
 
 #include "Volume.h"
 #include "SkeletonGraph.h"
 #include "Bounds.h"
 
-struct SegmentData
+union SegmentData
 {
-	float numBranches;
-	float numEndPoints;
-	float numJunctionVoxels;
-	float numJunctions;
-	float numSlabs;
-	float numTriples;
-	float numQuadruples;
-	float averageBranchLength;
-	float maximumBranchLength;
-	float shortestPath;
-	float voxels;
-	float width;
-	float height;
-	float depth;
-	float signalCount;
+	struct {
+		float numBranches;
+		float numEndPoints;
+		float numJunctionVoxels;
+		float numJunctions;
+		float numSlabs;
+		float numTriples;
+		float numQuadruples;
+		float averageBranchLength;
+		float maximumBranchLength;
+		float shortestPath;
+		float voxels;
+		float width;
+		float height;
+		float depth;
+		float signalCount;
+	};
+	float values[15];
 };
 
 struct Segment

@@ -25,5 +25,6 @@
 
 #define GIT_REVISION 0x@BUILD_VERSION@
 #define GIT_BRANCH "@BUILD_BRANCH@"
+#define APP_VERSION "@BUILD_APP_VER@"
 
 #endif // VERSION_H

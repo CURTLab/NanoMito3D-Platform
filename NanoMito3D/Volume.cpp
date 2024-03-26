@@ -26,9 +26,12 @@
 #include <hdf5.h>
 #endif // USE_H5
 
+#ifdef USE_OPENCV
+#include <opencv2/opencv.hpp>
+#endif
+
 #include <stdexcept>
 #include <assert.h>
-#include <opencv2/opencv.hpp>
 #include <filesystem>
 
 class VolumeData
@@ -114,6 +117,7 @@ void Volume::fill(uint8_t value)
 	std::fill_n(d->data, d->voxels, value);
 }
 
+#ifdef USE_OPENCV
 Volume Volume::loadTif(const std::string &fileName, std::array<float, 3> voxelSize, std::array<float, 3> origin)
 {
 	std::vector<cv::Mat> stack;
@@ -161,6 +165,7 @@ void Volume::saveTif(const std::string &fileName) const
 	if (!cv::imwritemulti(fileName, stack))
 		throw std::runtime_error("Could not save tif stack at " + fileName);
 }
+#endif // USE_OPENCV
 
 #ifdef USE_H5
 Volume Volume::loadH5(const std::string &fileName, std::string name)
