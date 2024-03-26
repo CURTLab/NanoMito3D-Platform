@@ -48,7 +48,7 @@ public:
 
 	inline constexpr const QString &fileName() const { return m_fileName; }
 	inline constexpr const Localizations &localizations() const { return m_locs; }
-	inline constexpr const Localizations &correctedLocalizations() const { return m_corrected; }
+	inline constexpr Localizations &correctedLocalizations() { return m_corrected; }
 
 signals:
 	void localizationsLoaded();

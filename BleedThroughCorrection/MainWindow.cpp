@@ -50,6 +50,8 @@ MainWindow::MainWindow(QWidget *parent)
 	m_bar->setVisible(false);
 	m_ui->preview->setColorMap(ColorMap::Hot);
 
+	m_ui->buttonSaveCorrection->setEnabled(false);
+
 	m_ui->splitter->setSizes({250, width()-250});
 
 	connect(m_ui->spinPenWidth, qOverload<int>(&QSpinBox::valueChanged),
@@ -197,6 +199,20 @@ MainWindow::MainWindow(QWidget *parent)
 		});
 		m_ui->preview->setImage(image);
 		m_ui->frame->setEnabled(true);
+		m_ui->buttonSaveCorrection->setEnabled(true);
+	});
+
+	connect(m_ui->buttonSaveCorrection, &QAbstractButton::clicked, this, [this]() {
+		QFileInfo fi(m_ui->editFile->text());
+		QString defaultFile = m_ui->editFile->text().isEmpty() ? "" : fi.absolutePath() + "/" + fi.baseName() + "_bleedCorr.tsf";
+		QString fileName = QFileDialog::getSaveFileName(this, tr("Save corrected localization file"), defaultFile, "TSF file (*.tsf)");
+
+		try {
+			if (!fileName.isEmpty())
+				m_correction.correctedLocalizations().save(fileName.toStdString());
+		} catch (std::exception &e) {
+			QMessageBox::critical(this, tr("Error"), tr("Could not save correct TSF file.\nReason: %1").arg(e.what()));
+		}
 	});
 
 
